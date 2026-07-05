@@ -364,8 +364,8 @@
                             <span class="text-[17px] font-black text-gray-900">₹{{ getEffectivePrice(product) }}</span>
                             <span v-if="getEffectiveOriginal(product) && getEffectiveOriginal(product) > getEffectivePrice(product)"
                                   class="text-[13px] text-gray-400 line-through font-medium">{{ getEffectiveOriginal(product) }}</span>
-                            <span v-if="product.discount > 0"
-                                  class="text-[13px] font-bold text-green-600">{{ product.discount }}% off</span>
+                            <span v-if="getTotalDiscount(product) > 0"
+                                  class="text-[13px] font-bold text-green-600">{{ getTotalDiscount(product) }}% off</span>
                         </div>
 
                         <!-- Cashback Badge (Search Results) -->
@@ -598,8 +598,8 @@
                                 <span class="text-[17px] font-black text-gray-900">₹{{ getEffectivePrice(product) }}</span>
                                 <span v-if="getEffectiveOriginal(product) && getEffectiveOriginal(product) > getEffectivePrice(product)"
                                       class="text-[13px] text-gray-400 line-through font-medium">{{ getEffectiveOriginal(product) }}</span>
-                                <span v-if="product.discount > 0"
-                                      class="text-[13px] font-bold text-green-600">{{ product.discount }}% off</span>
+                                <span v-if="getTotalDiscount(product) > 0"
+                                      class="text-[13px] font-bold text-green-600">{{ getTotalDiscount(product) }}% off</span>
                             </div>
 
                             <!-- Cashback Badge -->
@@ -733,8 +733,8 @@
                         <div class="mt-4 flex items-baseline gap-2">
                             <span class="text-2xl font-black text-blue-700">₹{{ getEffectivePrice(selectedProduct).toFixed(2) }}</span>
                             <span v-if="getEffectiveOriginal(selectedProduct) && getEffectiveOriginal(selectedProduct) > getEffectivePrice(selectedProduct)" class="text-base text-gray-400 line-through">₹{{ Number(getEffectiveOriginal(selectedProduct)).toFixed(2) }}</span>
-                            <span v-if="selectedProduct.discount > 0" class="text-sm text-red-500 font-bold bg-red-50 px-2 py-0.5 rounded">
-                                {{ selectedProduct.discount }}% OFF
+                            <span v-if="getTotalDiscount(selectedProduct) > 0" class="text-sm text-red-500 font-bold bg-red-50 px-2 py-0.5 rounded">
+                                {{ getTotalDiscount(selectedProduct) }}% OFF
                             </span>
                             <span v-if="globalDiscount > 0" class="text-xs font-bold text-pink-500 bg-pink-50 px-2 py-0.5 rounded-full">🔥 Sale On!</span>
                         </div>
@@ -1035,12 +1035,12 @@
                         <div class="relative h-32 flex items-center justify-center p-2 overflow-hidden"
                              style="background: linear-gradient(135deg,#fff0f6 0%,#f3e8ff 100%);">
                             <!-- Discount Badge -->
-                            <div v-if="product.discount > 0"
+                            <div v-if="getTotalDiscount(product) > 0"
                                  class="absolute top-2 left-2 z-10 flex items-center gap-0.5 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm">
-                                <i class="fas fa-bolt text-[7px]"></i> {{ product.discount }}% OFF
+                                <i class="fas fa-bolt text-[7px]"></i> {{ getTotalDiscount(product) }}% OFF
                             </div>
                             <!-- Badge -->
-                            <div v-if="product.badge && !product.discount"
+                            <div v-if="product.badge && !getTotalDiscount(product)"
                                  class="absolute top-2 left-2 bg-gradient-to-r from-orange-400 to-pink-400 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full z-10">
                                 {{ product.badge }}
                             </div>
@@ -1246,7 +1246,7 @@
                                 <div class="w-full">
                                     <p class="text-[11px] text-center text-gray-700 font-semibold leading-tight mb-0.5" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ product.name }}</p>
                                     <p class="text-[12px] text-center font-black text-gray-900">₹{{ getEffectivePrice(product) }}</p>
-                                    <p v-if="product.discount>0" class="text-[10px] text-center text-green-600 font-bold">{{ product.discount }}% off</p>
+                                    <p v-if="getTotalDiscount(product)>0" class="text-[10px] text-center text-green-600 font-bold">{{ getTotalDiscount(product) }}% off</p>
                                 </div>
                             </div>
                         </div>
@@ -3498,10 +3498,10 @@
                     return (!product.hasVariants && product.originalPrice) ? Number(product.originalPrice) : null;
                 },
                 getTotalDiscount(product) {
-                    const orig = Number(product.originalPrice || this.getBasePrice(product));
-                    const eff = this.getEffectivePrice(product);
-                    if (orig <= eff) return 0;
-                    return Math.round(((orig - eff) / orig) * 100);
+                    const orig = Number(product.originalPrice);
+                    const price = Number(product.price);
+                    if (!orig || orig <= price) return 0;
+                    return Math.round(((orig - price) / orig) * 100);
                 },
                 getTrackingProgressWidth(s){ let map={pending:'0%',confirmed:'33%',shipped:'66%',delivered:'100%'}; return map[s]||'0%'; },
                 getTrackingCircleClass(orderStatus,step){ let steps=['pending','confirmed','shipped','delivered']; let idx=steps.indexOf(orderStatus),stepIdx=steps.indexOf(step); if(stepIdx<idx) return 'bg-green-500 text-white border-2 border-green-600'; if(stepIdx===idx) return orderStatus==='delivered'?'bg-green-600 text-white pulse-glow':'bg-blue-600 text-white pulse-glow'; return 'bg-white text-gray-300 border-2 border-gray-200'; },
