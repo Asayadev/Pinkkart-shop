@@ -354,6 +354,11 @@
                     <!-- Info -->
                     <div class="px-2.5 pt-2 pb-3">
                         <p class="text-gray-800 text-[13px] font-semibold leading-snug mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ product.name }}</p>
+                        <!-- Weight/Variant Selector -->
+                        <select v-if="product.hasVariants && product.variants" v-model.number="product.selectedVariantIndex" @click.stop @change.stop
+                                class="w-full text-[11px] font-bold border border-gray-200 rounded-lg px-1.5 py-1 mb-1 bg-white text-gray-700 outline-none">
+                            <option v-for="(v, i) in product.variants" :key="i" :value="i">{{ v.weight }} - ₹{{ v.price }}</option>
+                        </select>
 
                         <div class="flex items-baseline gap-1.5 flex-wrap mb-0.5">
                             <span class="text-[17px] font-black text-gray-900">₹{{ getEffectivePrice(product) }}</span>
@@ -582,6 +587,12 @@
                             <!-- Name -->
                             <p class="text-gray-800 text-[13px] font-semibold leading-snug mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ product.name }}</p>
 
+                            <!-- Weight/Variant Selector -->
+                            <select v-if="product.hasVariants && product.variants" v-model.number="product.selectedVariantIndex" @click.stop @change.stop
+                                    class="w-full text-[11px] font-bold border border-gray-200 rounded-lg px-1.5 py-1 mb-1 bg-white text-gray-700 outline-none">
+                                <option v-for="(v, i) in product.variants" :key="i" :value="i">{{ v.weight }} - ₹{{ v.price }}</option>
+                            </select>
+
                             <!-- Price + strikethrough + % off — Meesho style -->
                             <div class="flex items-baseline gap-1.5 flex-wrap mb-0.5">
                                 <span class="text-[17px] font-black text-gray-900">₹{{ getEffectivePrice(product) }}</span>
@@ -706,6 +717,17 @@
                             <p v-if="!selectedSize" class="text-[10px] text-orange-500 font-bold mt-2 flex items-center gap-1">
                                 <i class="fas fa-exclamation-circle"></i> Cart में add करने से पहले size select करें
                             </p>
+                        </div>
+
+                        <!-- Weight/Variant Selector — Product Detail -->
+                        <div v-if="selectedProduct.hasVariants && selectedProduct.variants" class="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <p class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                                <i class="fas fa-weight-hanging text-pink-500"></i> Weight चुनें
+                            </p>
+                            <select v-model.number="selectedProduct.selectedVariantIndex"
+                                    class="w-full text-sm font-bold border-2 border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 outline-none">
+                                <option v-for="(v, i) in selectedProduct.variants" :key="i" :value="i">{{ v.weight }} - ₹{{ v.price }}</option>
+                            </select>
                         </div>
 
                         <div class="mt-4 flex items-baseline gap-2">
@@ -913,7 +935,7 @@
                 <div v-else class="space-y-3">
                     <div v-for="item in cartItems" :key="item.id" class="flex gap-3 items-center justify-between border-b pb-3">
                         <img :src="getDriveImageUrl(item.image)" class="w-12 h-12 object-contain bg-gray-50 rounded" alt="" onerror="this.src='https://placehold.co/100x100'">
-                        <div class="flex-1 min-w-0"><p class="font-semibold text-sm truncate">{{ item.name }}</p><p class="text-xs text-blue-600 font-bold">₹{{ Number(item.price).toFixed(2) }}</p></div>
+                        <div class="flex-1 min-w-0"><p class="font-semibold text-sm truncate">{{ item.name }}</p><p v-if="item.weight" class="text-[10px] text-gray-500 font-semibold">{{ item.weight }}</p><p class="text-xs text-blue-600 font-bold">₹{{ Number(item.price).toFixed(2) }}</p></div>
                         <div class="flex items-center gap-2"><button @click="updateQuantity(item, -1)" class="w-6 h-6 rounded bg-gray-100 text-xs font-bold">-</button><span class="text-xs font-bold w-4 text-center">{{ item.quantity }}</span><button @click="updateQuantity(item, 1)" class="w-6 h-6 rounded bg-gray-100 text-xs font-bold">+</button></div>
                     </div>
                     <div class="pt-3 flex justify-between items-center font-bold text-lg"><span>Total Bill:</span><span class="text-blue-700">₹{{ cartTotal.toFixed(2) }}</span></div>
@@ -1029,6 +1051,12 @@
                                style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:28px;">
                                 {{ product.name }}
                             </p>
+
+                            <!-- Weight/Variant Selector -->
+                            <select v-if="product.hasVariants && product.variants" v-model.number="product.selectedVariantIndex" @click.stop @change.stop
+                                    class="w-full text-[10px] font-bold border border-gray-200 rounded-lg px-1 py-1 bg-white text-gray-700 outline-none">
+                                <option v-for="(v, i) in product.variants" :key="i" :value="i">{{ v.weight }} - ₹{{ v.price }}</option>
+                            </select>
 
                             <!-- Price Row -->
                             <div class="flex items-baseline gap-1 flex-wrap">
@@ -3037,11 +3065,15 @@
                     // buyNow ke liye temporary item banao — cart me ADD mat karo
                     let img = (product.images && product.images[0]) ? product.images[0] : product.image;
                     let sizeLabel = (product.sizes && product.sizes.length) ? (this.selectedSize || 'Free Size') : 'Free Size';
+                    let variant = this.getSelectedVariant(product);
+                    let weightLabel = variant ? variant.weight : '';
+                    let finalPrice = variant ? Number(variant.price) : Number(product.price);
                     this.buyNowItem = [{
                         cartKey: product.id + '_buynow',
                         id: product.id,
                         name: product.name + (sizeLabel && sizeLabel !== 'Free Size' ? ' (' + sizeLabel + ')' : ''),
-                        price: product.price,
+                        price: finalPrice,
+                        weight: weightLabel,
                         image: img,
                         quantity: 1,
                         size: sizeLabel,
@@ -3215,11 +3247,14 @@
                     }
                     let img = (product.images && product.images[0]) ? product.images[0] : product.image;
                     let sizeLabel = (product.sizes && product.sizes.length) ? (this.selectedSize || '') : 'Free Size';
-                    let cartKey = product.id + (sizeLabel ? '_' + sizeLabel : '');
+                    let variant = this.getSelectedVariant(product);
+                    let weightLabel = variant ? variant.weight : '';
+                    let finalPrice = variant ? Number(variant.price) : Number(product.price);
+                    let cartKey = product.id + (weightLabel ? '_' + weightLabel : '') + (sizeLabel ? '_' + sizeLabel : '');
                     let existing = this.cartItems.find(i=>i.cartKey===cartKey);
                     if(existing){ existing.quantity+=1; }
-                    else { this.cartItems.push({ cartKey, id:product.id, name:product.name + (sizeLabel && sizeLabel!=='Free Size' ? ' ('+sizeLabel+')' : ''), price:product.price, image:img, quantity:1, size:sizeLabel, shopkeeperName: product.shopkeeperName || product.shopkeeper || product.sellerName || '', shopkeeperId: product.shopkeeperId || product.sellerId || '' }); }
-                    this.showToast(`🛒 ${product.name}${sizeLabel && sizeLabel!=='Free Size' ? ' ['+sizeLabel+']' : ''} added to cart`, 'cart');
+                    else { this.cartItems.push({ cartKey, id:product.id, name:product.name + (sizeLabel && sizeLabel!=='Free Size' ? ' ('+sizeLabel+')' : ''), price:finalPrice, weight:weightLabel, image:img, quantity:1, size:sizeLabel, shopkeeperName: product.shopkeeperName || product.shopkeeper || product.sellerName || '', shopkeeperId: product.shopkeeperId || product.sellerId || '' }); }
+                    this.showToast(`🛒 ${product.name}${weightLabel ? ' ('+weightLabel+')' : ''}${sizeLabel && sizeLabel!=='Free Size' ? ' ['+sizeLabel+']' : ''} added to cart`, 'cart');
                     localStorage.setItem('sw_cart',JSON.stringify(this.cartItems));
                 },
                 updateQuantity(item,delta){ let newQty = item.quantity+delta; if(newQty<=0){ this.cartItems = this.cartItems.filter(i=>(i.cartKey||i.id)!==(item.cartKey||item.id)); }else{ item.quantity = newQty; } localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); },
@@ -3265,7 +3300,7 @@
                     }
                     if (!this.uploadedImageUrl) { this.uploadError = 'Please upload payment receipt'; return; }
                     if (this.utrId.length < 6) { alert('Please enter a valid UTR ID'); return; }
-                    const orderItems = this.cartItems.map(it => ({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), cashback:Number(it.cashback||0), shopkeeperName: it.shopkeeperName || it.shopkeeper || '', shopkeeper: it.shopkeeperName || it.shopkeeper || '', shopkeeperId: it.shopkeeperId || '' }));
+                    const orderItems = this.cartItems.map(it => ({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), weight: it.weight || '', cashback:Number(it.cashback||0), shopkeeperName: it.shopkeeperName || it.shopkeeper || '', shopkeeper: it.shopkeeperName || it.shopkeeper || '', shopkeeperId: it.shopkeeperId || '' }));
                     const usedCashback = this.cashbackApplied;
                     const totalCashbackEarnable = this.cartItems.reduce((s,i)=>s+Number(i.cashback||0)*i.quantity,0);
                     const newOrder = {
@@ -3316,7 +3351,7 @@
                 async confirmOrder(){
                     if(!this.checkoutForm.name.trim()||!this.checkoutForm.phone.trim()||this.checkoutForm.phone.length<10||!this.checkoutForm.address.trim()){ alert('All fields required'); return; }
                     const activeItems = this.isBuyNowMode ? this.buyNowItem : this.cartItems;
-                    const orderItems = activeItems.map(it=>({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), cashback:Number(it.cashback||0), shopkeeperName:it.shopkeeperName||it.shopkeeper||'', shopkeeper:it.shopkeeperName||it.shopkeeper||'', shopkeeperId:it.shopkeeperId||'' }));
+                    const orderItems = activeItems.map(it=>({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), weight: it.weight || '', cashback:Number(it.cashback||0), shopkeeperName:it.shopkeeperName||it.shopkeeper||'', shopkeeper:it.shopkeeperName||it.shopkeeper||'', shopkeeperId:it.shopkeeperId||'' }));
                     const itemTotal = activeItems.reduce((s,i)=>s+Number(i.price)*i.quantity,0);
                     const totalCashbackEarnable = activeItems.reduce((s,i)=>s+Number(i.cashback||0)*i.quantity,0);
                     const usedCashback = this.cashbackApplied;
@@ -3431,19 +3466,28 @@
                 },
 
                 calculateDiscount(orig,curr){ if(!orig||!curr) return 0; return Math.round(((Number(orig)-Number(curr))/Number(orig))*100); },
+                getSelectedVariant(product) {
+                    if (!product || !product.hasVariants || !product.variants || !product.variants.length) return null;
+                    const idx = (product.selectedVariantIndex !== undefined && product.variants[product.selectedVariantIndex]) ? product.selectedVariantIndex : 0;
+                    return product.variants[idx] || product.variants[0];
+                },
+                getBasePrice(product) {
+                    const variant = this.getSelectedVariant(product);
+                    return variant ? Number(variant.price) : Number(product.price);
+                },
                 getEffectivePrice(product) {
-                    const base = Number(product.price);
+                    const base = this.getBasePrice(product);
                     if (!this.globalDiscount || this.globalDiscount <= 0) return base;
                     return Math.round(base * (1 - this.globalDiscount / 100));
                 },
                 getEffectiveOriginal(product) {
-                    // If global discount is on, original = product's own price (before discount)
-                    if (this.globalDiscount > 0) return Number(product.price);
-                    // Otherwise use stored originalPrice if exists
-                    return product.originalPrice ? Number(product.originalPrice) : null;
+                    // If global discount is on, original = product's own (variant-aware) price before discount
+                    if (this.globalDiscount > 0) return this.getBasePrice(product);
+                    // Otherwise use stored originalPrice if exists (only meaningful for non-variant products)
+                    return (!product.hasVariants && product.originalPrice) ? Number(product.originalPrice) : null;
                 },
                 getTotalDiscount(product) {
-                    const orig = Number(product.originalPrice || product.price);
+                    const orig = Number(product.originalPrice || this.getBasePrice(product));
                     const eff = this.getEffectivePrice(product);
                     if (orig <= eff) return 0;
                     return Math.round(((orig - eff) / orig) * 100);
@@ -3465,7 +3509,7 @@
                     if (cls === 'active') return 'text-blue-600';
                     return 'text-gray-400';
                 },
-                loadProducts(){ database.ref('products').on('value',(snapshot)=>{ let data=snapshot.val(); this.products=data?Object.keys(data).map(key=>({ id:key, ...data[key] })):[];  this.$nextTick(()=>this.loadSuggestions()); }); },
+                loadProducts(){ database.ref('products').on('value',(snapshot)=>{ let data=snapshot.val(); this.products=data?Object.keys(data).map(key=>({ id:key, ...data[key], selectedVariantIndex: 0 })):[];  this.$nextTick(()=>this.loadSuggestions()); }); },
                 loadMyOrders(){
                     if(!this.loggedInUser) return;
                     database.ref('orders').on('value',(snapshot)=>{
