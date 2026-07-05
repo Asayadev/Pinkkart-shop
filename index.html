@@ -852,10 +852,14 @@
                             </div>
                             <div class="p-3">
                                 <h4 class="font-bold text-xs text-gray-800 truncate">{{ product.name }}</h4>
+                                <select v-if="product.hasVariants && product.variants" v-model.number="product.selectedVariantIndex" @click.stop @change.stop
+                                        class="w-full text-[10px] font-bold border border-gray-200 rounded-lg px-1 py-1 mb-1 bg-white text-gray-700 outline-none">
+                                    <option v-for="(v, i) in product.variants" :key="i" :value="i">{{ v.weight }} - ₹{{ v.price }}</option>
+                                </select>
                                 <div class="flex justify-between items-center mt-2 flex-wrap gap-1">
                                     <div>
-                                        <span class="text-sm font-black text-blue-700">₹{{ Number(product.price).toFixed(2) }}</span>
-                                        <span v-if="product.originalPrice && Number(product.originalPrice) > Number(product.price)" class="text-[10px] text-gray-400 line-through ml-1">₹{{ Number(product.originalPrice).toFixed(2) }}</span>
+                                        <span class="text-sm font-black text-blue-700">₹{{ getEffectivePrice(product).toFixed(2) }}</span>
+                                        <span v-if="getEffectiveOriginal(product) && getEffectiveOriginal(product) > getEffectivePrice(product)" class="text-[10px] text-gray-400 line-through ml-1">₹{{ getEffectiveOriginal(product).toFixed(2) }}</span>
                                     </div>
                                     <span class="text-[10px] text-blue-600 font-bold">View</span>
                                 </div>
@@ -901,7 +905,14 @@
                             <img :src="getDriveImageUrl(product.images ? product.images[0] : product.image)" class="h-20 object-contain" @click="viewProductDetail(product)" onerror="this.src='https://placehold.co/100x100'">
                         </div>
                         <div class="flex-1 flex flex-col justify-between">
-                            <div><h3 class="font-bold text-sm text-gray-800 truncate pr-6">{{ product.name }}</h3><div class="flex items-center gap-2"><span class="text-sm font-black text-blue-700">₹{{ Number(product.price).toFixed(2) }}</span><span v-if="product.originalPrice" class="text-[10px] text-gray-400 line-through">₹{{ product.originalPrice }}</span></div></div>
+                            <div>
+                                <h3 class="font-bold text-sm text-gray-800 truncate pr-6">{{ product.name }}</h3>
+                                <select v-if="product.hasVariants && product.variants" v-model.number="product.selectedVariantIndex" @click.stop
+                                        class="w-full text-[10px] font-bold border border-gray-200 rounded-lg px-1 py-1 my-1 bg-white text-gray-700 outline-none">
+                                    <option v-for="(v, i) in product.variants" :key="i" :value="i">{{ v.weight }} - ₹{{ v.price }}</option>
+                                </select>
+                                <div class="flex items-center gap-2"><span class="text-sm font-black text-blue-700">₹{{ getEffectivePrice(product).toFixed(2) }}</span><span v-if="getEffectiveOriginal(product) && getEffectiveOriginal(product) > getEffectivePrice(product)" class="text-[10px] text-gray-400 line-through">₹{{ getEffectiveOriginal(product).toFixed(2) }}</span></div>
+                            </div>
                             <div class="flex gap-2 mt-2">
                                 <button @click="addToCart(product)" :disabled="!!(product.stockStatus && product.stockStatus !== 'In stock')" :class="(product.stockStatus && product.stockStatus !== 'In stock') ? 'bg-gray-300' : 'bg-blue-600'" class="flex-1 text-white text-[10px] py-2 rounded-lg font-bold"><i class="fas fa-cart-plus mr-1"></i> Cart</button>
                                 <button @click="buyNow(product)" :disabled="!!(product.stockStatus && product.stockStatus !== 'In stock')" :class="(product.stockStatus && product.stockStatus !== 'In stock') ? 'bg-gray-200 text-gray-400' : 'bg-orange-500 text-white'" class="flex-1 text-[10px] py-2 rounded-lg font-bold"><i class="fas fa-bolt mr-1"></i> Buy</button>
