@@ -35,14 +35,24 @@
                     }
                 }, 300);
             });
+            window.__pkScriptFallback = function (cdnUrl, label) {
+                document.write('<script src="' + cdnUrl + '" onerror="window.__pkAssetError(\'' + label + '\')"><' + '/script>');
+            };
+            window.__pkLinkFallback = function (cdnUrl, label) {
+                var l = document.createElement('link');
+                l.rel = 'stylesheet';
+                l.href = cdnUrl;
+                l.onerror = function () { window.__pkAssetError(label); };
+                document.head.appendChild(l);
+            };
         })();
     </script>
-    <script src="assets/js/tailwind.js" onerror="window.__pkAssetError && window.__pkAssetError('tailwind.js')"></script>
-    <link rel="stylesheet" href="assets/css/inter.css" onerror="window.__pkAssetError && window.__pkAssetError('inter.css')">
-    <link rel="stylesheet" href="assets/css/all.min.css" onerror="window.__pkAssetError && window.__pkAssetError('all.min.css')">
-    <script src="assets/js/firebase-app-compat.js" onerror="window.__pkAssetError && window.__pkAssetError('firebase-app-compat.js')"></script>
-    <script src="assets/js/firebase-database-compat.js" onerror="window.__pkAssetError && window.__pkAssetError('firebase-database-compat.js')"></script>
-    <script src="assets/js/firebase-auth-compat.js" onerror="window.__pkAssetError && window.__pkAssetError('firebase-auth-compat.js')"></script>
+    <script src="tailwind.js" onerror="window.__pkScriptFallback('https://cdn.tailwindcss.com', 'tailwind.js')"></script>
+    <link rel="stylesheet" href="inter.css" onerror="window.__pkLinkFallback('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap', 'inter.css')">
+    <link rel="stylesheet" href="all.min.css" onerror="window.__pkLinkFallback('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css', 'all.min.css')">
+    <script src="firebase-app-compat.js" onerror="window.__pkScriptFallback('https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js', 'firebase-app-compat.js')"></script>
+    <script src="firebase-database-compat.js" onerror="window.__pkScriptFallback('https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js', 'firebase-database-compat.js')"></script>
+    <script src="firebase-auth-compat.js" onerror="window.__pkScriptFallback('https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js', 'firebase-auth-compat.js')"></script>
     <style>
         /* ===== THEME VARIABLES ===== */
         :root {
@@ -309,7 +319,7 @@
                     <span v-if="wishlist.length" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">{{ wishlist.length }}</span>
                 </button>
                 <!-- Cart icon -->
-                <button @click="activeTab='cart'; history.pushState({page:'tab'},'')" class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-blue-50 transition">
+                <button @click="isBuyNowMode=false; buyNowItem=null; activeTab='cart'; history.pushState({page:'tab'},'')" class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-blue-50 transition">
                     <i class="fas fa-shopping-cart text-gray-600 text-xl"></i>
                     <span v-if="cartItems && cartItems.length" class="absolute -top-0.5 -right-0.5 bg-purple-600 text-white text-[10px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">{{ cartItems.length }}</span>
                 </button>
@@ -958,7 +968,7 @@
 
         <div v-show="activeTab === 'cart'">
             <div class="bg-white rounded-2xl shadow-sm p-4">
-                <div class="border-b pb-3 mb-3 flex justify-between items-center"><h2 class="text-lg font-bold">Shopping Cart 🛒</h2><button v-if="cartItems.length" @click="cartItems = []" class="text-red-500 text-xs hover:underline">Remove all</button></div>
+                <div class="border-b pb-3 mb-3 flex justify-between items-center"><h2 class="text-lg font-bold">Shopping Cart 🛒</h2><button v-if="cartItems.length" @click="cartItems = []; localStorage.removeItem('sw_cart'); syncCartToCloud();" class="text-red-500 text-xs hover:underline">Remove all</button></div>
                 <div v-if="cartItems.length === 0" class="py-8 text-center">
                     <svg class="mx-auto mb-3" width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="60" cy="60" r="60" fill="#eff6ff"/>
@@ -2565,7 +2575,7 @@
 
     </div>
 
-    <script src="assets/js/vue.js" onerror="window.__pkAssetError && window.__pkAssetError('vue.js')"></script>
+    <script src="vue.js" onerror="window.__pkScriptFallback('https://cdn.jsdelivr.net/npm/vue@2.7.14', 'vue.js')"></script>
     <script>
         const firebaseConfig = { 
             apiKey: "AIzaSyDbVF9_RqXDXdIASOy2WgbwSmwuiowu2Bg", 
@@ -2911,6 +2921,7 @@
                             const freshRewards  = Number(d.rewards  || 0);
                             this.loggedInUser = { ...this.loggedInUser, cashback: freshCashback, rewards: freshRewards };
                             localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
+                            if (d.avatarUrl) { this.userAvatarUrl = d.avatarUrl; localStorage.setItem('sw_avatar_' + phone, d.avatarUrl); }
                         } else if (uid) {
                             const esnap = await database.ref('users_email/' + uid).once('value');
                             if (esnap.exists()) {
@@ -3145,7 +3156,36 @@
                     this.isBuyNowMode = true;
                     this.selectedPaymentMethod='COD'; this.utrId=''; this.uploadedImageUrl=''; this.uploadError=''; this.showCheckoutModal=true; history.pushState({page:'checkout'}, '');
                 },
-                toggleWishlist(product){ let idx = this.wishlist.findIndex(i=>i.id===product.id); idx>-1? this.wishlist.splice(idx,1):this.wishlist.push(product); localStorage.setItem('sw_wishlist',JSON.stringify(this.wishlist)); this.showToast(`${product.name} ${idx>-1?'removed from':'added to'} wishlist`,'info'); },
+                toggleWishlist(product){ let idx = this.wishlist.findIndex(i=>i.id===product.id); idx>-1? this.wishlist.splice(idx,1):this.wishlist.push(product); localStorage.setItem('sw_wishlist',JSON.stringify(this.wishlist)); this.syncWishlistToCloud(); this.showToast(`${product.name} ${idx>-1?'removed from':'added to'} wishlist`,'info'); },
+                getCloudUserPath() {
+                    if (!this.loggedInUser) return null;
+                    if (this.loggedInUser.phone) return 'users/' + this.loggedInUser.phone;
+                    if (this.loggedInUser.uid) return 'users_email/' + this.loggedInUser.uid;
+                    return null;
+                },
+                async syncWishlistToCloud() {
+                    const base = this.getCloudUserPath();
+                    if (!base) return;
+                    try { await database.ref(base + '/wishlist').set(this.wishlist); } catch(e) {}
+                },
+                async syncCartToCloud() {
+                    const base = this.getCloudUserPath();
+                    if (!base) return;
+                    try { await database.ref(base + '/cart').set(this.cartItems); } catch(e) {}
+                },
+                async loadUserCloudData() {
+                    const base = this.getCloudUserPath();
+                    if (!base) return;
+                    try {
+                        const snap = await database.ref(base).once('value');
+                        if (snap.exists()) {
+                            const d = snap.val();
+                            if (Array.isArray(d.wishlist)) { this.wishlist = d.wishlist; localStorage.setItem('sw_wishlist', JSON.stringify(this.wishlist)); }
+                            if (Array.isArray(d.cart)) { this.cartItems = d.cart; localStorage.setItem('sw_cart', JSON.stringify(this.cartItems)); }
+                            if (d.avatarUrl) { this.userAvatarUrl = d.avatarUrl; if(this.loggedInUser.phone) localStorage.setItem('sw_avatar_' + this.loggedInUser.phone, d.avatarUrl); }
+                        }
+                    } catch(e) {}
+                },
                 isInWishlist(product){ return this.wishlist.some(i=>i.id===product.id); },
                 openAuth(mode){ this.authMode = mode; this.authSubMode = 'phone'; this.loginForm = { name:'', phone:'' }; this.signupForm = { name:'', phone:'' }; this.emailForm = { email:'', password:'' }; this.emailSignupForm = { name:'', email:'', password:'' }; this.emailAuthError = ''; this.showLoginModal = true; history.pushState({page:'login'}, ''); },
                 async submitSignUp(){
@@ -3169,6 +3209,7 @@
                     this.showLoginModal = false;
                     this.showToast('✅ Account created! Welcome ' + name, 'info');
                     this.loadMyOrders();
+                    this.loadUserCloudData();
                     this._executePendingAction();
                 },
                 async submitLogin(){
@@ -3195,6 +3236,7 @@
                     this.showLoginModal = false;
                     this.showToast('✅ Welcome back, ' + savedUser.name + '!', 'info');
                     this.loadMyOrders();
+                    this.loadUserCloudData();
                     this._executePendingAction();
                 },
                 startCashbackListener(phone, uid) {
@@ -3306,9 +3348,9 @@
                     if(existing){ existing.quantity+=1; }
                     else { this.cartItems.push({ cartKey, id:product.id, name:product.name + (sizeLabel && sizeLabel!=='Free Size' ? ' ('+sizeLabel+')' : ''), price:finalPrice, weight:weightLabel, image:img, quantity:1, size:sizeLabel, shopkeeperName: product.shopkeeperName || product.shopkeeper || product.sellerName || '', shopkeeperId: product.shopkeeperId || product.sellerId || '' }); }
                     this.showToast(`🛒 ${product.name}${weightLabel ? ' ('+weightLabel+')' : ''}${sizeLabel && sizeLabel!=='Free Size' ? ' ['+sizeLabel+']' : ''} added to cart`, 'cart');
-                    localStorage.setItem('sw_cart',JSON.stringify(this.cartItems));
+                    localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); this.syncCartToCloud();
                 },
-                updateQuantity(item,delta){ let newQty = item.quantity+delta; if(newQty<=0){ this.cartItems = this.cartItems.filter(i=>(i.cartKey||i.id)!==(item.cartKey||item.id)); }else{ item.quantity = newQty; } localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); },
+                updateQuantity(item,delta){ let newQty = item.quantity+delta; if(newQty<=0){ this.cartItems = this.cartItems.filter(i=>(i.cartKey||i.id)!==(item.cartKey||item.id)); }else{ item.quantity = newQty; } localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); this.syncCartToCloud(); },
                 openCheckout(){
                     if(!this.cartItems.length) return;
                     if(!this.loggedInUser){
@@ -3390,7 +3432,7 @@
                             this.loggedInUser = { ...this.loggedInUser, cashback: remainingCashback };
                             localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
                         }
-                        if(!this.isBuyNowMode){ this.cartItems = []; localStorage.removeItem('sw_cart'); }
+                        if(!this.isBuyNowMode){ this.cartItems = []; localStorage.removeItem('sw_cart'); this.syncCartToCloud(); }
                         this.buyNowItem=null; this.isBuyNowMode=false; this.useCashback=true;
                         this.showPaymentVerifyModal = false; this.selectedProduct = null;
                         this.utrId = ''; this.uploadedImageUrl = '';
@@ -3419,7 +3461,7 @@
                             localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
                         }
                         // Sirf normal cart ko clear karo, buyNow mode mein cart safe rahe
-                        if(!this.isBuyNowMode){ this.cartItems=[]; localStorage.removeItem('sw_cart'); }
+                        if(!this.isBuyNowMode){ this.cartItems=[]; localStorage.removeItem('sw_cart'); this.syncCartToCloud(); }
                         this.buyNowItem=null; this.isBuyNowMode=false; this.useCashback=true;
                         this.showCheckoutModal=false; this.selectedProduct=null; this.showOrderSuccess=true; this.showToast('Order placed!','order'); this.loadMyOrders();
                     }catch(e){ alert(e.message); }
@@ -3560,7 +3602,7 @@
                     if (cls === 'active') return 'text-blue-600';
                     return 'text-gray-400';
                 },
-                loadProducts(){ database.ref('products').on('value',(snapshot)=>{ let data=snapshot.val(); this.products=data?Object.keys(data).map(key=>({ id:key, ...data[key], selectedVariantIndex: 0 })):[];  this.$nextTick(()=>this.loadSuggestions()); }); },
+                loadProducts(){ database.ref('products').on('value',(snapshot)=>{ let data=snapshot.val(); if(data){ this.products=Object.keys(data).map(key=>({ id:key, ...data[key], selectedVariantIndex: 0 })); } else if(!this.products.length){ this.products=[]; } this.$nextTick(()=>this.loadSuggestions()); }); },
                 loadMyOrders(){
                     if(!this.loggedInUser) return;
                     database.ref('orders').on('value',(snapshot)=>{
@@ -3770,7 +3812,7 @@
                 let savedRV = localStorage.getItem('sw_recently_viewed'); if(savedRV) this.recentlyViewed = JSON.parse(savedRV);
                 // Restore theme
                 if(localStorage.getItem('pk_theme') === 'dark'){ this.isDark = true; document.body.classList.add('dark-mode'); }
-                if(this.loggedInUser) { this.fetchProfile(); this.startCashbackListener(this.loggedInUser.phone, this.loggedInUser.uid); }
+                if(this.loggedInUser) { this.fetchProfile(); this.startCashbackListener(this.loggedInUser.phone, this.loggedInUser.uid); this.loadUserCloudData(); }
                 this.loadProducts(); this.loadMyOrders(); this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.startSlider();
 
                 // --- FIREBASE EMAIL AUTH STATE LISTENER ---
@@ -3786,6 +3828,7 @@
                                 localStorage.setItem('sw_user', JSON.stringify(userData));
                                 vm.loadMyOrders();
                                 vm.startCashbackListener(userData.phone, firebaseUser.uid);
+                                vm.loadUserCloudData();
                             }
                         } catch(e) { console.log('Auth state check error:', e); }
                     }
