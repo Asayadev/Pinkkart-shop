@@ -1031,7 +1031,7 @@
 
                                 </p>
                                 <p class="text-[10px]" :class="cartTotal >= 300 ? 'text-green-600' : 'text-gray-400'">
-                                    Redeem cashback on orders above ₹300
+                                    Min ₹300 order; use up to 10% cashback on order value.
 
                                 </p>
                             </div>
@@ -2179,14 +2179,14 @@
                                  :class="cartTotal >= 300 ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'">
                                 <label class="flex items-center gap-2 cursor-pointer px-2.5 py-2"
                                        :class="cartTotal < 300 ? 'opacity-60' : ''">
-                            <input type="checkbox" v-model="useCashback" disabled
+                            <input type="checkbox" v-model="useCashback"
                                            class="w-3.5 h-3.5 accent-green-500 rounded cursor-pointer flex-shrink-0">
                                     <div class="flex-1">
                                         <p class="text-[11px] font-bold" :class="cartTotal >= 300 ? 'text-green-700' : 'text-gray-500'">
-                                            Cashback redemption paused
+                                             Use Cashback Wallet (₹{{ Number(loggedInUser.cashback || 0).toFixed(2) }})
                                         </p>
                                         <p class="text-[9px]" :class="cartTotal >= 300 ? 'text-green-600' : 'text-gray-400'">
-                                            Wallet balance remains visible; redemption needs secure checkout.
+                                             Min ₹300 order; for ₹500+ orders, use up to 10% of the order value.
                                         </p>
                                     </div>
                                     <span v-if="useCashback && cashbackApplied > 0"
@@ -2942,17 +2942,19 @@
                     return this.cartTotal < ds.minOrderLimit ? ds.deliveryCharge : 0;
                 },
 
-                cashbackApplied() {
+            cashbackApplied() {
     if (!this.useCashback || !this.loggedInUser) return 0;
     if (this.cartTotal < 300) return 0;
 
     const availableCashback = Number(this.loggedInUser.cashback || 0);
     const maxUsable = this.cartTotal - this.vipDiscountApplied + this.deliveryChargeApplied;
+    const cashbackLimit = this.cartTotal >= 300 ? this.cartTotal * 0.10 : maxUsable;
 
-    return Math.min(availableCashback, maxUsable);
+    return Math.min(availableCashback, maxUsable, cashbackLimit);
 },
+
                 
-                grandTotal() {
+           grandTotal() {
                     return Math.max(0, this.cartTotal - this.vipDiscountApplied + this.deliveryChargeApplied - this.cashbackApplied);
                 },
                 userOrders() {
@@ -3656,7 +3658,7 @@
                     if (this.utrId.length < 6) { alert('Please enter a valid UTR ID'); return; }
                     const activeItems = this.isBuyNowMode && this.buyNowItem ? this.buyNowItem : this.cartItems;
                     const orderItems = activeItems.map(it => ({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), weight: it.weight || '', cashback:Number(it.cashback||0), shopkeeperName: it.shopkeeperName || it.shopkeeper || '', shopkeeper: it.shopkeeperName || it.shopkeeper || '', shopkeeperId: it.shopkeeperId || '' }));
-                    const usedCashback = this.cashbackApplied;
+                    const usedCashback = Number(this.cashbackApplied || 0);
                     const totalCashbackEarnable = 0;
                     const newOrder = {
                         customerName: this.checkoutForm.name.trim(),
@@ -3685,6 +3687,14 @@
                     };
                     try {
                         await database.ref('orders').push(newOrder);
+                        if (usedCashback > 0) {
+                            const cashbackRef = database.ref(`users_email/${authUser.uid}/cashback`);
+                            const cashbackResult = await cashbackRef.transaction(currentCashback =>
+                                Math.max(0, Number(currentCashback || 0) - usedCashback)
+                            );
+                            this.loggedInUser.cashback = Number(cashbackResult.snapshot.val() || 0);
+                            localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
+                        }
                         if(!this.isBuyNowMode){ this.cartItems = []; localStorage.removeItem('sw_cart'); this.syncCartToCloud(); }
                         this.buyNowItem=null; this.isBuyNowMode=false; this.useCashback=false;
                         this.showPaymentVerifyModal = false; this.selectedProduct = null;
@@ -3705,10 +3715,18 @@
                     const activeItems = this.isBuyNowMode ? this.buyNowItem : this.cartItems;
                     const orderItems = activeItems.map(it=>({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), weight: it.weight || '', cashback:Number(it.cashback||0), shopkeeperName:it.shopkeeperName||it.shopkeeper||'', shopkeeper:it.shopkeeperName||it.shopkeeper||'', shopkeeperId:it.shopkeeperId||'' }));
                     const totalCashbackEarnable = 0;
-                    const usedCashback = this.cashbackApplied;
-                    const newOrder = { customerName:this.checkoutForm.name.trim(), customerPhone:this.checkoutForm.phone.trim(), customerAddress:this.checkoutForm.address.trim(), userEmail:authUser.email||'', customerEmail:authUser.email||'', uid:authUser.uid, items:orderItems, itemTotal:this.cartTotal, vipDiscount:this.vipDiscountApplied, isVipOrder:this.isVipActive, vipPlanId:this.isVipActive?this.vipMembership.planId:'', vipPlanName:this.isVipActive?this.vipMembership.planName:'', deliveryCharge:this.deliveryChargeApplied, cashbackUsed:0, totalCashbackEarnable:0, cashbackCredited:false, total:this.grandTotal, status:'pending', paymentMethod:'COD', payment_method:'COD', date:new Date().toISOString() };
+                    const usedCashback = Number(this.cashbackApplied || 0);
+                    const newOrder = { customerName:this.checkoutForm.name.trim(), customerPhone:this.checkoutForm.phone.trim(), customerAddress:this.checkoutForm.address.trim(), userEmail:authUser.email||'', customerEmail:authUser.email||'', uid:authUser.uid, items:orderItems, itemTotal:this.cartTotal, vipDiscount:this.vipDiscountApplied, isVipOrder:this.isVipActive, vipPlanId:this.isVipActive?this.vipMembership.planId:'', vipPlanName:this.isVipActive?this.vipMembership.planName:'', deliveryCharge:this.deliveryChargeApplied, cashbackUsed:usedCashback, totalCashbackEarnable:0, cashbackCredited:false, total:this.grandTotal, status:'pending', paymentMethod:'COD', payment_method:'COD', date:new Date().toISOString() };
                     try{
                         await database.ref('orders').push(newOrder);
+                        if (usedCashback > 0) {
+                            const cashbackRef = database.ref(`users_email/${authUser.uid}/cashback`);
+                            const cashbackResult = await cashbackRef.transaction(currentCashback =>
+                                Math.max(0, Number(currentCashback || 0) - usedCashback)
+                            );
+                            this.loggedInUser.cashback = Number(cashbackResult.snapshot.val() || 0);
+                            localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
+                        }
                         // Sirf normal cart ko clear karo, buyNow mode mein cart safe rahe
                         if(!this.isBuyNowMode){ this.cartItems=[]; localStorage.removeItem('sw_cart'); this.syncCartToCloud(); }
                         this.buyNowItem=null; this.isBuyNowMode=false; this.useCashback=false;
