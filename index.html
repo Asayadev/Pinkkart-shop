@@ -309,6 +309,10 @@
                         <button @click="openAuth('login')" class="text-[11px] bg-pink-500 text-white px-2.5 py-0.5 rounded-full font-bold">Login</button>
                         <button @click="openAuth('signup')" class="text-[11px] border border-pink-400 text-pink-600 px-2.5 py-0.5 rounded-full font-bold">Sign Up</button>
                     </div>
+                    <button v-if="loggedInUser" @click="openVipPlans()" class="flex items-center gap-1 text-[11px] font-bold text-amber-700 leading-tight mt-0.5">
+                        👑 {{ isVipActive ? 'VIP Member' : 'VIP Pass @ ₹' + (featuredVipPlan ? Number(featuredVipPlan.price).toFixed(0) : '199') }}
+                        <i class="fas fa-chevron-right text-[8px]"></i>
+                    </button>
                 </div>
             </div>
 
@@ -442,26 +446,6 @@
 
         <div v-show="activeTab === 'products'" v-if="!showSearchResults">
             
-            <div v-if="!selectedProduct" class="mb-4 overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-yellow-50 to-orange-50 shadow-sm">
-                <div class="flex items-center gap-3 p-4">
-                    <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow"><i class="fas fa-crown text-xl"></i></div>
-                    <div class="min-w-0 flex-1">
-                        <template v-if="isVipActive">
-                            <p class="text-sm font-black text-amber-900">👑 VIP Member</p>
-                            <p class="text-xs font-bold text-amber-800">{{ vipMembership.planName }}</p>
-                            <p class="text-[10px] text-amber-700">Expires: {{ formatVipDate(vipMembership.expiryDate) }}</p>
-                        </template>
-                        <template v-else>
-                            <p class="text-sm font-black text-amber-900">Buy VIP Pass @ ₹{{ featuredVipPlan ? Number(featuredVipPlan.price).toFixed(0) : '199' }} - Get Flat {{ featuredVipPlan ? Number(featuredVipPlan.discount) : 10 }}% OFF &amp; {{ featuredVipPlan && !featuredVipPlan.freeDelivery ? 'VIP benefits' : 'Free Delivery' }}</p>
-                            <p class="text-[10px] text-amber-700">Join VIP to save on eligible orders and delivery.</p>
-                        </template>
-                        <p v-if="vipMembershipRequest && vipMembershipRequest.status === 'pending'" class="mt-1 text-[10px] font-bold text-blue-700"><i class="fas fa-clock mr-1"></i>VIP payment is awaiting admin verification.</p>
-                    </div>
-                    <button @click="openVipPlans()" class="flex-shrink-0 rounded-xl bg-amber-500 px-3 py-2 text-[10px] font-black text-white shadow hover:bg-amber-600">
-                        {{ isVipActive ? 'VIP Details' : 'Buy / Upgrade' }}
-                    </button>
-                </div>
-            </div>
 
             <div v-if="!selectedProduct" class="space-y-4 mb-5">
                 
@@ -522,29 +506,30 @@
                     </div>
                 </div>
 
-                <!-- "Still looking for these?" section -->
-                <div v-if="recentlyViewed.length > 0" class="rounded-2xl overflow-hidden" style="background:#f5ff00; border: 2px solid #e5ef00;">
+                                <!-- "Still looking for these?" section -->
+                <div v-if="recentlyViewed.length > 0" class="rounded-2xl overflow-hidden shadow-sm" style="background:#FDF2F8; border: 1.5px solid #FBCFE8;">
                     <div class="px-4 pt-3 pb-2">
-                        <h3 class="text-base font-black text-gray-900 leading-tight">
+                        <h3 class="text-base font-black text-pink-950 leading-tight">
                             <span v-if="loggedInUser">{{ loggedInUser.name.split(' ')[0] }}, </span>still looking for these?
                         </h3>
                     </div>
                     <div class="flex gap-3 overflow-x-auto no-scrollbar px-3 pb-4">
                         <div v-for="product in recentlyViewed.slice(0,8)" :key="'rv_'+product.id"
                              @click="viewProductDetail(product)"
-                             class="flex-shrink-0 w-28 bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition">
-                            <div class="h-24 bg-gray-50 flex items-center justify-center p-2">
+                             class="flex-shrink-0 w-28 bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition border border-pink-100">
+                            <div class="h-24 bg-white flex items-center justify-center p-2">
                                 <img :src="getDriveImageUrl(product.images && product.images.length ? product.images[0] : (product.image||'https://placehold.co/200x200?text=P'))"
                                      class="w-full h-full object-contain"
                                      onerror="this.src='https://placehold.co/200x200?text=P'">
                             </div>
                             <div class="px-2 pb-2 pt-1">
                                 <p class="text-[10px] font-semibold text-gray-700 truncate leading-tight mb-1">{{ product.name }}</p>
-                                <button class="w-full text-[10px] font-black text-gray-900 bg-yellow-300 hover:bg-yellow-400 py-1 rounded-lg transition">View</button>
+                                <button class="w-full text-[10px] font-black text-white bg-pink-500 hover:bg-pink-600 py-1 rounded-lg transition shadow-xs">View</button>
                             </div>
                         </div>
                     </div>
                 </div>
+
 
                 <!-- Categories in 2 rows -->
                 <div>
@@ -556,14 +541,15 @@
                         <div style="display:flex; flex-direction:row; gap:10px; width:max-content;">
                             <div v-for="cat in availableCategories" :key="cat" @click="selectedCategory = cat"
                                  :class="selectedCategory === cat ? 'border-blue-500 bg-blue-50' : 'border-gray-100 bg-white'"
-                                 class="flex flex-col items-center gap-1 px-2.5 pt-2 pb-1.5 rounded-2xl border-2 cursor-pointer transition w-[62px] shadow-sm relative">
-                                <div class="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden"
+                                 class="flex flex-col items-center gap-1 px-2.5 pt-2 pb-1.5 rounded-2xl border-2 cursor-pointer transition w-[76px] min-w-[76px] shadow-sm relative">
+                                <div class="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden"
                                      :class="selectedCategory === cat ? 'bg-blue-100' : 'bg-gray-50'">
                                     <img v-if="categoryImages[cat]" :src="categoryImages[cat]" class="w-8 h-8 object-contain" :alt="cat" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
                                     <i v-if="!categoryImages[cat]" :class="getCategoryIcon(cat)" class="text-lg" :style="selectedCategory === cat ? 'color:#2563eb' : 'color:#94a3b8'"></i>
                                     <i v-if="categoryImages[cat]" :class="getCategoryIcon(cat)" class="text-lg hidden" :style="selectedCategory === cat ? 'color:#2563eb' : 'color:#94a3b8'"></i>
                                 </div>
-                                <span class="text-[9px] font-bold leading-tight text-center w-full truncate"
+                                <span class="text-[10px] font-bold leading-tight text-center w-full"
+                                      style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;"
                                       :class="selectedCategory === cat ? 'text-blue-700' : 'text-gray-600'">{{ cat }}</span>
                                 <div v-if="selectedCategory === cat" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-blue-600 rounded-full"></div>
                             </div>
@@ -1476,7 +1462,7 @@
                                 <label class="flex items-center gap-2 bg-white border border-dashed border-amber-300 rounded-xl px-3 py-2.5 cursor-pointer hover:bg-amber-50 transition">
                                     <i class="fas fa-camera text-amber-500 text-base"></i>
                                     <span class="text-[11px] text-gray-600 truncate">{{ reviewDraft.fileName || 'Product ka photo add karein' }}</span>
-                                    <input type="file" accept="image/*" @change="handleReviewFileChange" class="hidden">
+                                    <input type="file" accept="image/*" @change="handleReviewFileChange" :disabled="isUploadingReview" class="hidden">
                                 </label>
                                 <div v-if="reviewDraft.base64File" class="mt-2 flex items-center gap-2">
                                     <img :src="'data:'+reviewDraft.fileType+';base64,'+reviewDraft.base64File" class="w-16 h-16 object-cover rounded-xl border-2 border-amber-200">
@@ -1490,7 +1476,7 @@
                                 class="w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2">
                                 <span v-if="isUploadingReview" class="flex items-center gap-2">
                                     <span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.4);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;"></span>
-                                    Photo upload ho rahi hai...
+                                    Review submit ho raha hai...
                                 </span>
                                 <span v-else><i class="fas fa-paper-plane mr-1"></i> Review Submit Karein</span>
                             </button>
@@ -3460,19 +3446,22 @@
                         const requestRef = database.ref('vip_membership_requests').push();
                         const requestedAt = new Date().toISOString();
                         const user = this.loggedInUser;
-                        const request = {
-                            uid: user.uid || '',
-                            customerName: user.name || this.userProfile.name || 'Customer',
-                            customerPhone: user.phone || user.mobile || '',
-                            customerEmail: (firebase.auth().currentUser && firebase.auth().currentUser.email) || user.email || '',
-                            planId: plan.id,
-                            planName: plan.name,
-                            amount: Number(plan.price),
-                            utrId,
-                            receiptUrl: this.vipReceiptUrl,
-                            status: 'pending',
-                            requestedAt
-                        };
+                         const request = {
+                        uid: user.uid || (firebase.auth().currentUser && firebase.auth().currentUser.uid) || '',
+                        customerName: user.name || this.userProfile.name || 'Customer',
+                        customerPhone: user.phone || user.mobile || '',
+                        customerEmail: (firebase.auth().currentUser && firebase.auth().currentUser.email) || user.email || '',
+                        planId: plan.id,
+                        planName: plan.name,
+                        durationDays: Number(plan.durationDays || 30),
+                        discount: Number(plan.discount || 10),
+                        freeDelivery: plan.freeDelivery === true,
+                        amount: Number(plan.price),
+                        utrId,
+                        receiptUrl: this.vipReceiptUrl,
+                        status: 'pending',
+                        requestedAt
+                    };
                         const summary = { requestId: requestRef.key, status: 'pending', planId: plan.id, planName: plan.name, requestedAt };
                         const updates = {};
                         updates[`vip_membership_requests/${requestRef.key}`] = request;
@@ -3758,63 +3747,98 @@
                 handleReviewFileChange(e) {
                     const file = e.target.files[0];
                     if(!file) return;
-                    if(file.size > 4 * 1024 * 1024) { alert("File is too large! Maximum allowed size is 4MB."); return; }
+                    if(file.size > 4 * 1024 * 1024) {
+                        e.target.value = '';
+                        alert("File is too large! Maximum allowed size is 4MB.");
+                        return;
+                    }
                     this.reviewDraft.fileName = file.name;
                     this.reviewDraft.fileType = file.type;
+                    this.reviewDraft.base64File = '';
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         this.reviewDraft.base64File = event.target.result.split(',')[1];
                     };
+                    reader.onerror = () => {
+                        this.reviewDraft.fileName = '';
+                        this.reviewDraft.fileType = '';
+                        this.reviewDraft.base64File = '';
+                        this.showToast('Photo read nahi ho payi. Aap bina photo ke review submit kar sakte hain.', 'error');
+                    };
                     reader.readAsDataURL(file);
                 },
 
-                // Submit Review with photo upload (JSON format for Apps Script)
+                                // Submit review with fast ImgBB photo upload
                 async submitAdvancedReview(order) {
-                    if (this.reviewDraft.rating === 0) { this.showToast('Pehle star rating select karein!', 'error'); return; }
+                    if (this.reviewDraft.rating === 0) { 
+                        this.showToast('Pehle star rating select karein!', 'error'); 
+                        return; 
+                    }
+                    if (this.isUploadingReview) return;
+                    const authUser = firebase.auth().currentUser;
+                    if (!authUser || !this.loggedInUser || authUser.uid !== this.loggedInUser.uid) {
+                        this.showLoginModal = true;
+                        this.showToast('Review submit karne ke liye sign in karein.', 'error');
+                        return;
+                    }
+                    if (!order || !order.id) {
+                        this.showToast('Order details nahi mile. Review submit nahi hua.', 'error');
+                        return;
+                    }
+
                     this.isUploadingReview = true;
-                    let uploadedDriveUrl = "";
+                    let uploadedImageUrl = "";
 
-                    if (this.reviewDraft.base64File) {
-                        try {
-                            const response = await fetch(this.googleDriveScriptUrl, {
-                                method: 'POST',
-                                mode: 'cors',
-                                body: JSON.stringify({
-                                    base64: this.reviewDraft.base64File,
-                                    mimeType: this.reviewDraft.fileType,
-                                    fileName: this.reviewDraft.fileName
-                                })
-                            });
-                            const resData = await response.json();
-                            if (resData && (resData.link || resData.url)) {
-                                uploadedDriveUrl = resData.link || resData.url;
+                    try {
+                        // Direct Fast ImgBB Upload
+                        if (this.reviewDraft.base64File) {
+                            try {
+                                const formData = new FormData();
+                                formData.append('image', this.reviewDraft.base64File);
+                                const res = await fetch('https://api.imgbb.com/1/upload?key=9b6ea4121e0281d6911d13eaf8d59c86', {
+                                    method: 'POST',
+                                    body: formData
+                                });
+                                const resData = await res.json();
+                                if (resData && resData.success && resData.data && resData.data.url) {
+                                    uploadedImageUrl = resData.data.url;
+                                }
+                            } catch (uploadError) {
+                                console.warn('ImgBB photo upload failed:', uploadError);
                             }
-                        } catch (err) {
-                            // photo upload fail — text only save karein
                         }
+
+                        const reviewObject = {
+                            uid: authUser.uid,
+                            orderId: order.id,
+                            customerName: order.customerName || (this.loggedInUser && this.loggedInUser.name) || 'Verified Buyer',
+                            rating: Number(this.reviewDraft.rating),
+                            comment: String(this.reviewDraft.comment || '').trim(),
+                            reviewImage: uploadedImageUrl,
+                            timestamp: new Date().toISOString()
+                        };
+
+                        const updates = {};
+                        const productIds = [...new Set((Array.isArray(order.items) ? order.items : [])
+                            .map(item => item && item.id)
+                            .filter(Boolean))];
+                        productIds.forEach(productId => {
+                            const reviewsRef = database.ref(`public_reviews/${productId}`);
+                            const reviewKey = reviewsRef.push().key;
+                            if (reviewKey) updates[`public_reviews/${productId}/${reviewKey}`] = reviewObject;
+                        });
+                        updates[`orders/${order.id}/rating`] = reviewObject.rating;
+
+                        await database.ref().update(updates);
+                        this.reviewDraft = { rating: 0, comment: '', base64File: '', fileName: '', fileType: '' };
+                        this.showToast('Review submit ho gaya! Shukriya 🙏', 'order');
+                        this.loadMyOrders();
+                    } catch (error) {
+                        console.error('Review submission failed:', error);
+                        this.showToast('Review save nahi hua. Firebase rules check karein.', 'error');
+                    } finally {
+                        this.isUploadingReview = false;
                     }
-
-                    const reviewObject = {
-                        uid: this.loggedInUser && this.loggedInUser.uid || '',
-                        orderId: order.id,
-                        customerName: order.customerName || 'Verified Buyer',
-                        rating: this.reviewDraft.rating,
-                        comment: this.reviewDraft.comment.trim(),
-                        reviewImage: uploadedDriveUrl,
-                        timestamp: new Date().toISOString()
-                    };
-
-                    if (order.items && order.items.length) {
-                        for (let item of order.items) {
-                            await database.ref(`public_reviews/${item.id}`).push(reviewObject);
-                        }
-                    }
-
-                    await database.ref(`orders/${order.id}/rating`).set(this.reviewDraft.rating);
-                    this.reviewDraft = { rating: 0, comment: '', base64File: '', fileName: '', fileType: '' };
-                    this.isUploadingReview = false;
-                    this.showToast('Review submit ho gaya! Shukriya 🙏', 'order');
-                    this.loadMyOrders();
                 },
 
                 // Getters for frontend calculations
