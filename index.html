@@ -3476,6 +3476,41 @@
                         this.vipPurchaseSubmitting = false;
                     }
                 },
+                async creditDeliveredCashback(order) {
+                    try {
+                        const authUid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
+                        if (!order || !order.id || !authUid || order.uid !== authUid) return;
+                        this._cbInFlight = this._cbInFlight || {};
+                        this._cbFailed = this._cbFailed || {};
+                        if (this._cbInFlight[order.id] || this._cbFailed[order.id]) return;
+                        this._cbInFlight[order.id] = true;
+                        try {
+                            let earnAmt = Number(order.totalCashbackEarnable || 0);
+                            if (!(earnAmt > 0) && Array.isArray(order.items)) {
+                                earnAmt = order.items.reduce((s, it) => s + Number(it.cashback || 0) * Number(it.quantity || 1), 0);
+                            }
+                            if (!(earnAmt > 0) && Array.isArray(order.items)) {
+                                earnAmt = order.items.reduce((s, it) => {
+                                    const p = this.products.find(x => x.id === it.id);
+                                    return s + Number((p && p.cashback) || 0) * Number(it.quantity || 1);
+                                }, 0);
+                            }
+                            if (!(earnAmt > 0)) return; // products abhi load na hue ho to flag mark nahi karte
+                            const flagRef = database.ref(`orders/${order.id}/cashbackCredited`);
+                            const lock = await flagRef.transaction(c => c === true ? undefined : true);
+                            if (!lock.committed) return; // already credited (admin/rider/other device)
+                            try {
+                                await database.ref(`users_email/${authUid}/cashback`).transaction(c => Number(c || 0) + earnAmt);
+                                await database.ref(`orders/${order.id}`).update({ totalCashbackEarnable: earnAmt, cashbackCreditedAt: new Date().toISOString() });
+                                this.showToast(`₹${earnAmt.toFixed(2)} cashback wallet me add ho gaya!`, 'success');
+                            } catch (err) {
+                                this._cbFailed[order.id] = true;
+                                await flagRef.set(false).catch(() => {});
+                                throw err;
+                            }
+                        } finally { delete this._cbInFlight[order.id]; }
+                    } catch (e) { console.error('Cashback credit failed:', e); }
+                },
                 startCashbackListener(phone, uid) {
                     if (this._cashbackRef) { try { this._cashbackRef.off(); } catch(e){} this._cashbackRef = null; }
                     const authenticatedUid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
@@ -3652,10 +3687,24 @@
                     if (!this.uploadedImageUrl) { this.uploadError = 'Please upload payment receipt'; return; }
                     if (this.utrId.length < 6) { alert('Please enter a valid UTR ID'); return; }
                     const activeItems = this.isBuyNowMode && this.buyNowItem ? this.buyNowItem : this.cartItems;
-                    const orderItems = activeItems.map(it => ({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), weight: it.weight || '', cashback:Number(it.cashback||0), shopkeeperName: it.shopkeeperName || it.shopkeeper || '', shopkeeper: it.shopkeeperName || it.shopkeeper || '', shopkeeperId: it.shopkeeperId || '' }));
-                    const usedCashback = Number(this.cashbackApplied || 0);
-                    const totalCashbackEarnable = 0;
-                    const newOrder = {
+                                        const orderItems = activeItems.map(it => {
+                        const originalProd = this.products.find(p => p.id === it.id);
+                        const itemCashback = Number((originalProd && originalProd.cashback) || it.cashback || 0);
+                        return {
+                            id: it.id,
+                            name: it.name,
+                            quantity: it.quantity,
+                            price: Number(it.price),
+                            weight: it.weight || '',
+                            cashback: itemCashback,
+                            shopkeeperName: it.shopkeeperName || it.shopkeeper || '',
+                            shopkeeper: it.shopkeeperName || it.shopkeeper || '',
+                            shopkeeperId: it.shopkeeperId || ''
+                        };
+                    });
+                    const totalCashbackEarnable = orderItems.reduce((sum, it) => sum + (Number(it.cashback || 0) * Number(it.quantity || 1)), 0);
+const usedCashback = Number(this.cashbackApplied || 0);
+  const newOrder = {
                         customerName: this.checkoutForm.name.trim(),
                         customerPhone: this.checkoutForm.phone.trim(),
                         customerAddress: this.checkoutForm.address.trim(),
@@ -3670,7 +3719,7 @@
                         vipPlanName: this.isVipActive ? this.vipMembership.planName : '',
                         deliveryCharge: this.deliveryChargeApplied,
                         cashbackUsed: usedCashback,
-                        totalCashbackEarnable: 0,
+                       totalCashbackEarnable: totalCashbackEarnable,
                         cashbackCredited: false,
                         total: this.grandTotal,
                         status: 'pending',
@@ -3708,10 +3757,10 @@
                     }
                     if(!this.checkoutForm.name.trim()||!this.checkoutForm.phone.trim()||this.checkoutForm.phone.length<10||!this.checkoutForm.address.trim()){ alert('All fields required'); return; }
                     const activeItems = this.isBuyNowMode ? this.buyNowItem : this.cartItems;
-                    const orderItems = activeItems.map(it=>({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), weight: it.weight || '', cashback:Number(it.cashback||0), shopkeeperName:it.shopkeeperName||it.shopkeeper||'', shopkeeper:it.shopkeeperName||it.shopkeeper||'', shopkeeperId:it.shopkeeperId||'' }));
-                    const totalCashbackEarnable = 0;
+                    const orderItems = activeItems.map(it=>({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), weight: it.weight || '', cashback:Number(((this.products.find(p=>p.id===it.id)||{}).cashback) || it.cashback || 0), shopkeeperName:it.shopkeeperName||it.shopkeeper||'', shopkeeper:it.shopkeeperName||it.shopkeeper||'', shopkeeperId:it.shopkeeperId||'' }));
+                    const totalCashbackEarnable = orderItems.reduce((sum, it) => sum + (Number(it.cashback || 0) * Number(it.quantity || 1)), 0);
                     const usedCashback = Number(this.cashbackApplied || 0);
-                    const newOrder = { customerName:this.checkoutForm.name.trim(), customerPhone:this.checkoutForm.phone.trim(), customerAddress:this.checkoutForm.address.trim(), userEmail:authUser.email||'', customerEmail:authUser.email||'', uid:authUser.uid, items:orderItems, itemTotal:this.cartTotal, vipDiscount:this.vipDiscountApplied, isVipOrder:this.isVipActive, vipPlanId:this.isVipActive?this.vipMembership.planId:'', vipPlanName:this.isVipActive?this.vipMembership.planName:'', deliveryCharge:this.deliveryChargeApplied, cashbackUsed:usedCashback, totalCashbackEarnable:0, cashbackCredited:false, total:this.grandTotal, status:'pending', paymentMethod:'COD', payment_method:'COD', date:new Date().toISOString() };
+                    const newOrder = { customerName:this.checkoutForm.name.trim(), customerPhone:this.checkoutForm.phone.trim(), customerAddress:this.checkoutForm.address.trim(), userEmail:authUser.email||'', customerEmail:authUser.email||'', uid:authUser.uid, items:orderItems, itemTotal:this.cartTotal, vipDiscount:this.vipDiscountApplied, isVipOrder:this.isVipActive, vipPlanId:this.isVipActive?this.vipMembership.planId:'', vipPlanName:this.isVipActive?this.vipMembership.planName:'', deliveryCharge:this.deliveryChargeApplied, cashbackUsed:usedCashback, totalCashbackEarnable:totalCashbackEarnable, cashbackCredited:false, total:this.grandTotal, status:'pending', paymentMethod:'COD', payment_method:'COD', date:new Date().toISOString() };
                     try{
                         await database.ref('orders').push(newOrder);
                         if (usedCashback > 0) {
@@ -3923,6 +3972,7 @@
                                 this.previousOrderStatuses[order.id]=order.status;
                             });
                             this.orders=updatedOrders;
+                            updatedOrders.forEach(o => { if (o.status === 'delivered' && o.cashbackCredited === false) this.creditDeliveredCashback(o); });
                         } else {
                             this.orders=[];
                             this.previousOrderStatuses={};
