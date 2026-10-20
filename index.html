@@ -127,9 +127,17 @@
         /* Header */
         header { background: var(--bg-header) !important; border-color: var(--border-color) !important; }
 
-        /* Bottom Nav */
-        .fixed.bottom-0 { background: var(--bg-nav) !important; border-color: var(--border-color) !important; }
+        /* Page content ko bottom bar se upar rakhne ke liye */
+#app {
+    padding-bottom: 90px !important;
+}
 
+/* Bottom Nav solid aur clean */
+.fixed.bottom-0 {
+    background: #ffffff !important;
+    border-color: var(--border-color) !important;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08) !important;
+}
         /* Filter bar */
         .filter-btn {
             background: var(--filter-bg)     !important;
