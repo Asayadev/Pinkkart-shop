@@ -3541,9 +3541,35 @@
                         }
                     });
                 },
-                logout(){ this.loggedInUser=null; this.vipMembership=null; this.vipMembershipRequest=null; this.stopVipListeners(); localStorage.removeItem('sw_user'); this.orders=[]; this.previousOrderStatuses={}; if(this._cashbackRef){ try{ this._cashbackRef.off(); }catch(e){} this._cashbackRef=null; } try{ firebase.auth().signOut(); }catch(e){} this.showToast('Logged out','info'); },
+                logout() {
+    this.loggedInUser = null;
+    this.vipMembership = null;
+    this.vipMembershipRequest = null;
+    this.userAvatarUrl = '';
+    this.wishlist = [];
+    this.cartItems = [];
+    this.orders = [];
+    this.previousOrderStatuses = {};
 
-                // ── Pending action after login/signup ──
+    this.stopVipListeners();
+
+    localStorage.removeItem('sw_user');
+    localStorage.removeItem('sw_wishlist');
+    localStorage.removeItem('sw_cart');
+    localStorage.removeItem('sw_avatar_local');
+
+    if (this._cashbackRef) {
+        try { this._cashbackRef.off(); } catch (e) {}
+        this._cashbackRef = null;
+    }
+
+    try {
+        firebase.auth().signOut();
+    } catch (e) {}
+
+    this.showToast('Logged out', 'info');
+},
+// ── Pending action after login/signup ──
                 _executePendingAction(){
                     if(this.pendingAction === 'checkout'){
                         this.pendingAction = null;
@@ -4183,7 +4209,14 @@ const usedCashback = Number(this.cashbackApplied || 0);
                         vm.loggedInUser = null;
                         vm.vipMembership = null;
                         vm.vipMembershipRequest = null;
+                        vm.userAvatarUrl = '';
+                        vm.wishlist = [];
+                        vm.cartItems = [];
+                        vm.orders = [];
                         localStorage.removeItem('sw_user');
+                        localStorage.removeItem('sw_wishlist');
+                        localStorage.removeItem('sw_cart');
+                        localStorage.removeItem('sw_avatar_local');
                         vm.stopVipListeners();
                     }
                 });
