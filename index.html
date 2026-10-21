@@ -614,7 +614,7 @@
                     <span class="text-xs text-gray-400">{{ smartFilteredProducts.length }} items</span>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3 border-t border-l border-gray-100">
+                <div class="grid grid-cols-2 gap-0 border-t border-l border-gray-100">
                     <div v-for="product in smartFilteredProducts" :key="product.id"
                          class="relative bg-white border-b border-r border-gray-100 cursor-pointer active:bg-gray-50"
                          @click="viewProductDetail(product)">
