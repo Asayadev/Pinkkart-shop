@@ -292,9 +292,9 @@
     <div id="toastContainer"></div>
     <div id="app" v-cloak class="max-w-4xl mx-auto">
         
-        <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center mb-4 sticky top-0 z-50 backdrop-blur-sm bg-white/95" style="border-radius:0;">
-            <!-- Left: Avatar + Name -->
-            <div class="flex items-center gap-3">
+                <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center mb-4 sticky top-0 z-50 backdrop-blur-sm bg-white/95 w-full" style="border-radius:0;">
+            <!-- Left: Avatar + Details -->
+            <div class="flex items-center gap-3 flex-1 min-w-0 pr-2">
                 <label class="cursor-pointer relative shrink-0 block" title="Change profile photo" style="width:44px;height:44px;">
                     <div class="w-11 h-11 rounded-full overflow-hidden border-2 border-pink-200 flex items-center justify-center bg-gradient-to-br from-pink-100 to-purple-100 shadow-sm">
                         <img v-if="userAvatarUrl" :src="userAvatarUrl" class="w-full h-full object-cover">
@@ -307,29 +307,30 @@
                         <i class="fas fa-camera text-white" style="font-size:7px;"></i>
                     </div>
                 </label>
-                 <div>
+                <div class="min-w-0 flex-1">
                     <!-- 1. VIP Pass (Sabse Upar) -->
-                    <button v-if="loggedInUser" @click="openVipPlans()" class="flex items-center gap-1 text-[11px] font-bold text-amber-700 leading-tight mb-0.5">
+                    <button v-if="loggedInUser" @click="openVipPlans()" class="flex items-center gap-1 text-[11px] font-bold text-amber-700 leading-tight mb-0.5 whitespace-nowrap">
                          {{ isVipActive ? 'VIP Member' : 'VIP Pass @ ₹' + (featuredVipPlan ? Number(featuredVipPlan.price).toFixed(0) : '199') }}
                         <i class="fas fa-chevron-right text-[8px]"></i>
                     </button>
                     <p v-else class="text-xs text-gray-400 font-medium leading-tight">Welcome 👋</p>
 
                     <!-- 2. User Name (Beech me) -->
-                    <p v-if="loggedInUser" class="text-sm font-bold text-gray-800 leading-tight max-w-[130px] truncate">{{ loggedInUser.name }}</p>
+                    <p v-if="loggedInUser" class="text-sm font-bold text-gray-800 leading-tight max-w-[140px] truncate">{{ loggedInUser.name }}</p>
                     <div v-else class="flex items-center gap-1 mt-0.5">
                         <button @click="openAuth('login')" class="text-[11px] bg-pink-500 text-white px-2.5 py-0.5 rounded-full font-bold">Login</button>
                         <button @click="openAuth('signup')" class="text-[11px] border border-pink-400 text-pink-600 px-2.5 py-0.5 rounded-full font-bold">Sign Up</button>
                     </div>
 
                     <!-- 3. Cashback Badge (Name ke Niche) -->
-                    <p v-if="loggedInUser" class="text-[10px] font-bold text-green-600 leading-tight flex items-center gap-1 mt-0.5">
+                    <p v-if="loggedInUser" class="text-[10px] font-bold text-green-600 leading-tight flex items-center gap-1 mt-0.5 whitespace-nowrap">
                         <i class="fas fa-wallet text-[9px]"></i> ₹{{ Number(loggedInUser.cashback || 0).toFixed(2) }} Cashback
                     </p>
                 </div>
-            <!-- Right: Theme toggle + Wishlist + Cart -->
-            <div class="flex items-center gap-2">
+            </div>
 
+            <!-- Right: Wishlist + Cart (Pura Right Corner me) -->
+            <div class="flex items-center gap-2 shrink-0">
                 <!-- Wishlist icon -->
                 <button @click="activeTab='wishlist'; history.pushState({page:'tab'},'')" class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-pink-50 transition">
                     <i :class="wishlist.length ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-500'" class="text-xl"></i>
