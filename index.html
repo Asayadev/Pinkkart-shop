@@ -2746,7 +2746,7 @@
                 authMode: 'login',
                 pendingAction: null,
                 signupForm: { name: '', phone: '' },
-                loggedInUser: null,
+                loggedInUser: (function(){ try { return JSON.parse(localStorage.getItem('sw_user')) || null; } catch(e){ return null; } })(),
                 searchQuery: '',
                 availableCategories: ['All', 'Mobile', 'Electronics', 'Mobile & Accessories', 'Beauty product', 'Footwear', 'vegetables', 'Watches'],
                 selectedCategory: 'All',
@@ -4171,8 +4171,12 @@ const usedCashback = Number(this.cashbackApplied || 0);
             },
             mounted() {
                 // Never trust a browser-stored profile as proof of sign-in.
-                localStorage.removeItem('sw_user');
-                this.loggedInUser = null;
+                let cachedUser = localStorage.getItem('sw_user');
+if (cachedUser) {
+    try {
+        this.loggedInUser = JSON.parse(cachedUser);
+    } catch(e) {}
+}
                 this.vipMembership = null;
                 this.vipMembershipRequest = null;
                 let logo = localStorage.getItem('pk_shop_logo'); if(logo) this.shopLogoUrl = logo;
