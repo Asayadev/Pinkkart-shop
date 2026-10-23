@@ -310,10 +310,10 @@
                 <div class="min-w-0 flex-1">
                     <!-- 1. VIP Pass (Sabse Upar) -->
                     <button v-if="loggedInUser" @click="openVipPlans()" class="flex items-center gap-1 text-[11px] font-bold text-amber-700 leading-tight mb-0.5 whitespace-nowrap">
-                         {{ isVipActive ? 'VIP Member' : 'VIP Pass @ ₹' + (featuredVipPlan ? Number(featuredVipPlan.price).toFixed(0) : '199') }}
+                         {{ isVipActive ? 'VIP Member' : 'VIP Pass ₹' + (featuredVipPlan ? Number(featuredVipPlan.price).toFixed(0) : '199') }}
                         <i class="fas fa-chevron-right text-[8px]"></i>
                     </button>
-                    <p v-else class="text-xs text-gray-400 font-medium leading-tight">Welcome 👋</p>
+                    <p v-else class="text-xs text-gray-400 font-medium leading-tight">Welcome </p>
 
                     <!-- 2. User Name (Beech me) -->
                     <p v-if="loggedInUser" class="text-sm font-bold text-gray-800 leading-tight max-w-[140px] truncate">{{ loggedInUser.name }}</p>
