@@ -2298,6 +2298,11 @@
                                 <span class="font-semibold flex items-center gap-1"><i class="fas fa-wallet text-xs"></i> Cashback Discount</span>
                                 <span class="font-bold">-₹{{ cashbackApplied.toFixed(2) }}</span>
                             </div>
+                            <div v-if="couponDiscountApplied > 0" class="flex justify-between text-xs text-green-600 mt-1">
+                                <span class="font-semibold flex items-center gap-1"><i class="fas fa-ticket-alt text-xs"></i> Promo Discount ({{ appliedCoupon ? appliedCoupon.code : '' }})</span>
+                                <span class="font-bold">-₹{{ couponDiscountApplied.toFixed(2) }}</span>
+                            </div>
+
                             <div class="flex justify-between font-black text-sm pt-1 border-t">
                                 <span>Grand Total</span>
                                 <span class="text-pink-600">₹{{ grandTotal.toFixed(2) }}</span>
@@ -2306,6 +2311,42 @@
                     </div>
 
                     <!-- Payment Method -->
+                    <!-- Promo Code Section -->
+                    <div class="bg-gray-50 border border-gray-200 rounded-2xl p-3 mb-2">
+                        <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                            <i class="fas fa-ticket-alt text-pink-500"></i> Apply Promo Code
+                        </p>
+
+                        <!-- Jab Coupon lag chuka ho -->
+                        <div v-if="appliedCoupon" class="flex items-center justify-between bg-green-50 border border-green-200 px-3 py-2 rounded-xl">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-check-circle text-green-600 text-sm"></i>
+                                <div>
+                                    <p class="text-xs font-black text-green-800 tracking-wider uppercase">{{ appliedCoupon.code }}</p>
+                                    <p class="text-[10px] text-green-600 font-semibold">₹{{ couponDiscountApplied.toFixed(2) }} discount applied</p>
+                                </div>
+                            </div>
+                            <button @click="removeCoupon" class="text-red-500 text-xs font-bold hover:underline">
+                                Remove
+                            </button>
+                        </div>
+
+                        <!-- Jab Coupon lagana ho -->
+                        <div v-else class="flex gap-2">
+                            <input type="text" 
+                                   v-model="couponInput" 
+                                   placeholder="Enter code (e.g. WELCOME50)" 
+                                   class="flex-1 uppercase font-bold text-xs px-3 py-2 border rounded-xl outline-none focus:border-pink-400 bg-white">
+                            <button @click="applyCouponCode" 
+                                    :disabled="couponLoading || !couponInput.trim()" 
+                                    :class="couponLoading || !couponInput.trim() ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-pink-500 text-white hover:bg-pink-600 active:scale-95 shadow-sm shadow-pink-200'"
+                                    class="px-4 py-2 rounded-xl text-xs font-black transition flex items-center justify-center">
+                                <span v-if="couponLoading"><i class="fas fa-spinner fa-spin"></i></span>
+                                <span v-else>Apply</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <div>
                         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Payment Method</p>
                         <div class="grid grid-cols-2 gap-2">
@@ -2886,6 +2927,10 @@
                 showCancelModal: false,
                 activeCancelOrder: null,
                 cancelReasonPayload: { reason: '', otherReason: '' },
+                couponInput: '',
+                appliedCoupon: null,
+                couponDiscountApplied: 0,
+                couponLoading: false,
 
                 categoryImages: {},
                 
@@ -3052,9 +3097,11 @@
                 },
 
                 
-           grandTotal() {
-                    return Math.max(0, this.cartTotal - this.vipDiscountApplied + this.deliveryChargeApplied - this.cashbackApplied);
+                      grandTotal() {
+                    const couponDisc = Number(this.couponDiscountApplied || 0);
+                    return Math.max(0, this.cartTotal - this.vipDiscountApplied + this.deliveryChargeApplied - this.cashbackApplied - couponDisc);
                 },
+
                 userOrders() {
                     if (!this.loggedInUser) return [];
                     const u = this.loggedInUser;
@@ -3863,6 +3910,13 @@ const usedCashback = Number(this.cashbackApplied || 0);
                     };
                     try {
                         await database.ref('orders').push(newOrder);
+
+if (this.appliedCoupon && authUser && authUser.uid) {
+    await database.ref(`users_email/${authUser.uid}/usedCoupons/${this.appliedCoupon.code}`).set(true);
+}
+this.appliedCoupon = null;
+this.couponDiscountApplied = 0;
+                        
                         if (usedCashback > 0) {
                             const cashbackRef = database.ref(`users_email/${authUser.uid}/cashback`);
                             const cashbackResult = await cashbackRef.transaction(currentCashback =>
@@ -3888,14 +3942,24 @@ const usedCashback = Number(this.cashbackApplied || 0);
                         return;
                     }
                     if(!this.checkoutForm.name.trim()||!this.checkoutForm.phone.trim()||this.checkoutForm.phone.length<10||!this.checkoutForm.address.trim()){ alert('All fields required'); return; }
-                    const activeItems = this.isBuyNowMode ? this.buyNowItem : this.cartItems;
+                    const activeItems =this.isBuyNowMode ? this.buyNowItem : this.cartItems;
                     const orderItems = activeItems.map(it=>({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), weight: it.weight || '', cashback:Number(((this.products.find(p=>p.id===it.id)||{}).cashback) || it.cashback || 0), shopkeeperName:it.shopkeeperName||it.shopkeeper||'', shopkeeper:it.shopkeeperName||it.shopkeeper||'', shopkeeperId:it.shopkeeperId||'' }));
                     const totalCashbackEarnable = orderItems.reduce((sum, it) => sum + (Number(it.cashback || 0) * Number(it.quantity || 1)), 0);
                     const usedCashback = Number(this.cashbackApplied || 0);
-                    const newOrder = { customerName:this.checkoutForm.name.trim(), customerPhone:this.checkoutForm.phone.trim(), customerAddress:this.checkoutForm.address.trim(), userEmail:authUser.email||'', customerEmail:authUser.email||'', uid:authUser.uid, items:orderItems, itemTotal:this.cartTotal, vipDiscount:this.vipDiscountApplied, isVipOrder:this.isVipActive, vipPlanId:this.isVipActive?this.vipMembership.planId:'', vipPlanName:this.isVipActive?this.vipMembership.planName:'', deliveryCharge:this.deliveryChargeApplied, cashbackUsed:usedCashback, totalCashbackEarnable:totalCashbackEarnable, cashbackCredited:false, total:this.grandTotal, status:'pending', paymentMethod:'COD', payment_method:'COD', date:new Date().toISOString() };
+                    const newOrder = { customerName:this.checkoutForm.name.trim(), customerPhone:this.checkoutForm.phone.trim(), customerAddress:this.checkoutForm.address.trim(), userEmail:authUser.email||'', customerEmail:authUser.email||'', uid:authUser.uid, items:orderItems, itemTotal:this.cartTotal, vipDiscount:this.vipDiscountApplied, isVipOrder:this.isVipActive, vipPlanId:this.isVipActive?this.vipMembership.planId:'', vipPlanName:this.isVipActive?this.vipMembership.planName:'', deliveryCharge:this.deliveryChargeApplied, cashbackUsed:usedCashback,
+                         couponCode: this.appliedCoupon ? this.appliedCoupon.code : '',
+                        couponDiscount: Number(this.couponDiscountApplied || 0),
+totalCashbackEarnable:totalCashbackEarnable, cashbackCredited:false, total:this.grandTotal, status:'pending', paymentMethod:'COD', payment_method:'COD', date:new Date().toISOString() };
                     try{
+                        // Order save karo aur coupon use record karo
                         await database.ref('orders').push(newOrder);
-                        if (usedCashback > 0) {
+                        if (this.appliedCoupon && authUser && authUser.uid) {
+                            await database.ref(`users_email/${authUser.uid}/usedCoupons/${this.appliedCoupon.code}`).set(true);
+                        }
+                        this.appliedCoupon = null;
+                        this.couponDiscountApplied = 0;
+
+                            if (usedCashback > 0) {
                             const cashbackRef = database.ref(`users_email/${authUser.uid}/cashback`);
                             const cashbackResult = await cashbackRef.transaction(currentCashback =>
                                 Math.max(0, Number(currentCashback || 0) - usedCashback)
@@ -3908,6 +3972,81 @@ const usedCashback = Number(this.cashbackApplied || 0);
                         this.buyNowItem=null; this.isBuyNowMode=false; this.useCashback=false;
                         this.showCheckoutModal=false; this.selectedProduct=null; this.showOrderSuccess=true; this.showToast('Order placed!','order'); this.loadMyOrders();
                     }catch(e){ alert(e.message); }
+                },
+                // 1. Coupon Code Apply Logic
+                async applyCouponCode() {
+                    const code = (this.couponInput || '').trim().toUpperCase();
+                    if (!code) return;
+
+                    const authUser = firebase.auth().currentUser;
+                    if (!authUser) {
+                        this.showToast('Please login to apply coupon code', 'error');
+                        return;
+                    }
+
+                    this.couponLoading = true;
+                    try {
+                        // Firebase se coupon data read karein
+                        const snap = await database.ref(`coupons/${code}`).once('value');
+                        if (!snap.exists()) {
+                            this.showToast('Invalid Coupon Code!', 'error');
+                            return;
+                        }
+
+                        const coupon = snap.val();
+
+                        // Active status check
+                        if (coupon.isActive === false) {
+                            this.showToast('Yeh coupon abhi expired ya inactive hai.', 'error');
+                            return;
+                        }
+
+                        // Minimum order limit check
+                        const minOrder = Number(coupon.minOrder || 0);
+                        if (this.cartTotal < minOrder) {
+                            this.showToast(`Yeh code sirf ₹${minOrder}+ ke orders par lagta hai.`, 'warn');
+                            return;
+                        }
+
+                        // One-time per user check
+                        const usedSnap = await database.ref(`users_email/${authUser.uid}/usedCoupons/${code}`).once('value');
+                        if (usedSnap.exists() && usedSnap.val() === true) {
+                            this.showToast('Aap yeh coupon pehle hi use kar chuke hain!', 'error');
+                            return;
+                        }
+
+                        // Discount calculate karein (Flat ya Percentage)
+                        let disc = 0;
+                        if (coupon.type === 'percent') {
+                            disc = (this.cartTotal * Number(coupon.value || 0)) / 100;
+                            if (coupon.maxDiscount && disc > Number(coupon.maxDiscount)) {
+                                disc = Number(coupon.maxDiscount);
+                            }
+                        } else {
+                            disc = Number(coupon.value || 0);
+                        }
+
+                        disc = Math.min(disc, this.cartTotal);
+
+                        this.appliedCoupon = { ...coupon, code };
+                        this.couponDiscountApplied = Math.round((disc + Number.EPSILON) * 100) / 100;
+                        this.couponInput = '';
+                        this.showToast(`🎉 Coupon applied! ₹${this.couponDiscountApplied.toFixed(2)} off`, 'success');
+
+                    } catch(err) {
+                        console.error('Coupon apply error:', err);
+                        this.showToast('Coupon check karne me dikkat aayi.', 'error');
+                    } finally {
+                        this.couponLoading = false;
+                    }
+                },
+
+                // 2. Coupon Remove Logic
+                removeCoupon() {
+                    this.appliedCoupon = null;
+                    this.couponDiscountApplied = 0;
+                    this.couponInput = '';
+                    this.showToast('Coupon code hata diya gaya.', 'info');
                 },
                                 cancelCustomerOrder(order) {
                     if (!order || !order.id) return;
