@@ -1535,11 +1535,11 @@
                                     <span class="text-[11px] text-gray-600 truncate">{{ reviewDraft.fileName || 'Product ka photo add karein' }}</span>
                                     <input type="file" accept="image/*" @change="handleReviewFileChange" :disabled="isUploadingReview" class="hidden">
                                 </label>
-                                <div v-if="reviewDraft.base64File" class="mt-2 flex items-center gap-2">
-                                    <img :src="'data:'+reviewDraft.fileType+';base64,'+reviewDraft.base64File" class="w-16 h-16 object-cover rounded-xl border-2 border-amber-200">
-                                    <button @click="reviewDraft.base64File=''; reviewDraft.fileName=''; reviewDraft.fileType='';" class="text-red-500 text-xs font-bold bg-red-50 px-2 py-1 rounded-lg border border-red-100"><i class="fas fa-times mr-1"></i>Remove</button>
+                                                       <div v-if="reviewDraft.previewUrl" class="mt-2 flex items-center gap-2">
+                                    <img :src="reviewDraft.previewUrl" class="w-16 h-16 object-cover rounded-xl border-2 border-amber-200">
+                                    <button @click="reviewDraft.previewUrl=''; reviewDraft.fileName=''; reviewDraft.selectedFile=null;" class="text-red-500 text-xs font-bold bg-red-50 px-2 py-1 rounded-lg border border-red-100"><i class="fas fa-times mr-1"></i>Remove</button>
                                 </div>
-                            </div>
+</div>
                             <!-- Submit -->
                             <button @click="submitAdvancedReview(order)"
                                 :disabled="isUploadingReview || reviewDraft.rating === 0"
@@ -3629,22 +3629,46 @@
                     this.vipReceiptUrl = '';
                     this.vipUploadError = '';
                 },
-                async uploadVipReceipt(event) {
+                                async uploadVipReceipt(event) {
                     const file = event.target.files && event.target.files[0];
                     if (!file) return;
                     this.vipUploadError = '';
                     this.vipReceiptUrl = '';
-                    if (!file.type.startsWith('image/')) { this.vipUploadError = 'Upload a receipt image.'; event.target.value = ''; return; }
-                    if (file.size > 10 * 1024 * 1024) { this.vipUploadError = 'Receipt image must be smaller than 10 MB.'; event.target.value = ''; return; }
+                    if (!file.type.startsWith('image/')) { 
+                        this.vipUploadError = 'Upload a receipt image.'; 
+                        event.target.value = ''; 
+                        return; 
+                    }
+                    if (file.size > 10 * 1024 * 1024) { 
+                        this.vipUploadError = 'Receipt image must be smaller than 10 MB.'; 
+                        event.target.value = ''; 
+                        return; 
+                    }
                     this.vipReceiptUploading = true;
+
                     try {
+                        const cloudName = "j2dkr5jj"; // Aapka Cloud Name
+                        const uploadPreset = "pinkkart_preset"; // Aapka Unsigned Preset
+
                         const formData = new FormData();
-                        formData.append('image', file);
-                        const response = await fetch('https://api.imgbb.com/1/upload?key=9b6ea4121e0281d6911d13eaf8d59c86', { method: 'POST', body: formData });
+                        formData.append('file', file);
+                        formData.append('upload_preset', uploadPreset);
+
+                        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+                            method: 'POST',
+                            body: formData
+                        });
+
                         const result = await response.json();
-                        if (!response.ok || !result.success || !result.data || !result.data.url) throw new Error('Receipt upload failed. Please try again.');
-                        this.vipReceiptUrl = result.data.url;
+
+                        if (result && result.secure_url) {
+                            this.vipReceiptUrl = result.secure_url;
+                            this.showToast('✅ VIP payment receipt uploaded!', 'success');
+                        } else {
+                            throw new Error((result.error && result.error.message) || 'Receipt upload failed. Please try again.');
+                        }
                     } catch (error) {
+                        console.error('VIP Receipt Upload Error:', error);
                         this.vipUploadError = error.message || 'Receipt upload failed. Check your connection.';
                     } finally {
                         this.vipReceiptUploading = false;
@@ -3895,28 +3919,40 @@
                     if(this.loggedInUser){ this.checkoutForm.name=this.loggedInUser.name||this.userProfile.name||''; this.checkoutForm.phone=this.loggedInUser.phone||this.userProfile.mobile||this.loggedInUser.mobile||''; this.checkoutForm.address=this.userProfile.address||this.loggedInUser.address||''; }
                     this.selectedPaymentMethod='COD'; this.utrId=''; this.uploadedImageUrl=''; this.uploadError=''; this.showCheckoutModal=true; history.pushState({page:'checkout'}, '');
                 },
-                async uploadReceiptToImgbb(event) {
+                                async uploadReceiptToImgbb(event) {
                     const file = event.target.files[0];
                     if (!file) return;
                     this.isUploading = true;
                     this.uploadError = '';
                     this.uploadedImageUrl = '';
+
                     try {
+                        const cloudName = "j2dkr5jj"; // Aapka Cloud Name
+                        const uploadPreset = "pinkkart_preset"; // Aapka Unsigned Preset
+
                         const formData = new FormData();
-                        formData.append('image', file);
-                        const res = await fetch('https://api.imgbb.com/1/upload?key=9b6ea4121e0281d6911d13eaf8d59c86', {
-                            method: 'POST', body: formData
+                        formData.append("file", file);
+                        formData.append("upload_preset", uploadPreset);
+
+                        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+                            method: "POST",
+                            body: formData
                         });
+
                         const data = await res.json();
-                        if (data.success) {
-                            this.uploadedImageUrl = data.data.url;
+
+                        if (data && data.secure_url) {
+                            this.uploadedImageUrl = data.secure_url;
+                            this.showToast('✅ Payment receipt upload ho gaya!', 'success');
                         } else {
-                            this.uploadError = 'Upload failed. Please try again.';
+                            this.uploadError = (data.error && data.error.message) || 'Upload failed. Please try again.';
                         }
                     } catch(e) {
-                        this.uploadError = 'Network error. Check connection.';
+                        console.error('Receipt Upload Error:', e);
+                        this.uploadError = 'Network error. Connection check karein.';
                     } finally {
                         this.isUploading = false;
+                        event.target.value = '';
                     }
                 },
                 async confirmOnlineOrder() {
@@ -4196,31 +4232,27 @@ totalCashbackEarnable:totalCashbackEarnable, cashbackCredited:false, total:this.
                 async submitReturnExchangeRequest(){ if(!this.loggedInUser || !this.loggedInUser.uid || !firebase.auth().currentUser || firebase.auth().currentUser.uid !== this.loggedInUser.uid){ this.showToast('Please sign in with your email account first.','error'); return; } if(!this.returnPayload.reason||!this.returnPayload.action){ alert('Select reason & action'); return; } if(this.returnPayload.action==='Return'){ let b=this.returnPayload.bankDetails; if(!b.name||!b.bankName||!b.accNumber||!b.ifsc||!b.phone){ alert('Bank details required'); return; } } const reqData={ uid:this.loggedInUser.uid, orderId:this.activeReturnOrder.id, customerPhone:this.activeReturnOrder.customerPhone, reason:this.returnPayload.reason, type:this.returnPayload.action, bankDetails:this.returnPayload.action==='Return'?this.returnPayload.bankDetails:null, timestamp:new Date().toISOString() }; await database.ref('return_requests').push(reqData); await database.ref(`orders/${this.activeReturnOrder.id}/returnRequest`).set(true); await database.ref(`orders/${this.activeReturnOrder.id}/status`).set(this.returnPayload.action.toLowerCase()+'_requested'); this.showReturnPage=false; this.showToast(`${this.returnPayload.action} request submitted`,'order'); this.loadMyOrders(); },
                 
                 // Advanced Review Input handler (Image to Base64)
-                handleReviewFileChange(e) {
+                                handleReviewFileChange(e) {
                     const file = e.target.files[0];
                     if(!file) return;
-                    if(file.size > 4 * 1024 * 1024) {
+                    if(file.size > 5 * 1024 * 1024) {
                         e.target.value = '';
-                        alert("File is too large! Maximum allowed size is 4MB.");
+                        this.showToast("Photo bahut badi hai! Max 5MB allowed.", "error");
                         return;
                     }
                     this.reviewDraft.fileName = file.name;
                     this.reviewDraft.fileType = file.type;
-                    this.reviewDraft.base64File = '';
+                    this.reviewDraft.selectedFile = file; // Direct file save
+                    
+                    // Local preview dikhane ke liye
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        this.reviewDraft.base64File = event.target.result.split(',')[1];
-                    };
-                    reader.onerror = () => {
-                        this.reviewDraft.fileName = '';
-                        this.reviewDraft.fileType = '';
-                        this.reviewDraft.base64File = '';
-                        this.showToast('Photo read nahi ho payi. Aap bina photo ke review submit kar sakte hain.', 'error');
+                        this.reviewDraft.previewUrl = event.target.result;
                     };
                     reader.readAsDataURL(file);
                 },
-
                                 // Submit review with fast ImgBB photo upload
+                                // Submit review with fast Cloudinary photo upload
                 async submitAdvancedReview(order) {
                     if (this.reviewDraft.rating === 0) { 
                         this.showToast('Pehle star rating select karein!', 'error'); 
@@ -4242,21 +4274,26 @@ totalCashbackEarnable:totalCashbackEarnable, cashbackCredited:false, total:this.
                     let uploadedImageUrl = "";
 
                     try {
-                        // Direct Fast ImgBB Upload
-                        if (this.reviewDraft.base64File) {
+                        // Direct Cloudinary Upload
+                        if (this.reviewDraft.selectedFile) {
                             try {
+                                const cloudName = "j2dkr5jj"; // Aapka Cloud Name
+                                const uploadPreset = "pinkkart_preset"; // Aapka Unsigned Preset
+
                                 const formData = new FormData();
-                                formData.append('image', this.reviewDraft.base64File);
-                                const res = await fetch('https://api.imgbb.com/1/upload?key=9b6ea4121e0281d6911d13eaf8d59c86', {
+                                formData.append('file', this.reviewDraft.selectedFile);
+                                formData.append('upload_preset', uploadPreset);
+
+                                const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
                                     method: 'POST',
                                     body: formData
                                 });
                                 const resData = await res.json();
-                                if (resData && resData.success && resData.data && resData.data.url) {
-                                    uploadedImageUrl = resData.data.url;
+                                if (resData && resData.secure_url) {
+                                    uploadedImageUrl = resData.secure_url;
                                 }
                             } catch (uploadError) {
-                                console.warn('ImgBB photo upload failed:', uploadError);
+                                console.warn('Cloudinary review photo upload failed:', uploadError);
                             }
                         }
 
@@ -4282,7 +4319,7 @@ totalCashbackEarnable:totalCashbackEarnable, cashbackCredited:false, total:this.
                         updates[`orders/${order.id}/rating`] = reviewObject.rating;
 
                         await database.ref().update(updates);
-                        this.reviewDraft = { rating: 0, comment: '', base64File: '', fileName: '', fileType: '' };
+                        this.reviewDraft = { rating: 0, comment: '', base64File: '', fileName: '', fileType: '', selectedFile: null, previewUrl: '' };
                         this.showToast('Review submit ho gaya! Shukriya 🙏', 'order');
                         this.loadMyOrders();
                     } catch (error) {
@@ -4447,51 +4484,52 @@ totalCashbackEarnable:totalCashbackEarnable, cashbackCredited:false, total:this.
                         this.showToast('Failed to submit rating', 'error');
                     }
                 },
-                async handleAvatarUpload(e) {
+                                async handleAvatarUpload(e) {
                     const file = e.target.files[0];
                     if (!file) return;
-                    if (file.size > 5 * 1024 * 1024) { this.showToast('Image bahut badi hai! Max 5MB allowed.', 'error'); return; }
+                    if (file.size > 5 * 1024 * 1024) { 
+                        this.showToast('Image bahut badi hai! Max 5MB allowed.', 'error'); 
+                        return; 
+                    }
+                    
                     this.isUploadingAvatar = true;
                     const storageKey = this.loggedInUser ? ('sw_avatar_' + this.loggedInUser.phone) : 'sw_avatar_local';
-                    const reader = new FileReader();
-                    reader.onload = async (ev) => {
-                        try {
-                            // imgbb pe upload karo
-                            const base64 = ev.target.result.split(',')[1];
-                            const formData = new FormData();
-                            formData.append('image', base64);
-                            const res = await fetch('https://api.imgbb.com/1/upload?key=9b6ea4121e0281d6911d13eaf8d59c86', {
-                                method: 'POST',
-                                body: formData
-                            });
-                            const data = await res.json();
-                            if (data && data.data && data.data.url) {
-                                const imgUrl = data.data.url;
-                                this.userAvatarUrl = imgUrl;
-                                localStorage.setItem(storageKey, imgUrl);
-                                // Firebase me bhi save karo agar logged in ho
-                                if (this.loggedInUser && this.loggedInUser.uid && firebase.auth().currentUser && firebase.auth().currentUser.uid === this.loggedInUser.uid) {
-                                    await database.ref('users_email/' + this.loggedInUser.uid).update({ avatarUrl: imgUrl });
-                                }
-                                this.showToast('✅ Profile photo update ho gaya!', 'success');
-                            } else {
-                                throw new Error('imgbb upload failed');
+
+                    try {
+                        const cloudName = "j2dkr5jj";
+                        const uploadPreset = "pinkkart_preset";
+
+                        const formData = new FormData();
+                        formData.append("file", file);
+                        formData.append("upload_preset", uploadPreset);
+
+                        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+                            method: "POST",
+                            body: formData
+                        });
+
+                        const data = await res.json();
+
+                        if (data && data.secure_url) {
+                            const imgUrl = data.secure_url;
+                            this.userAvatarUrl = imgUrl;
+                            localStorage.setItem(storageKey, imgUrl);
+
+                            // Firebase me bhi save karo
+                            if (this.loggedInUser && this.loggedInUser.uid && firebase.auth().currentUser && firebase.auth().currentUser.uid === this.loggedInUser.uid) {
+                                await database.ref('users_email/' + this.loggedInUser.uid).update({ avatarUrl: imgUrl });
                             }
-                        } catch(err) {
-                            // Fallback: base64 locally save karo
-                            this.userAvatarUrl = ev.target.result;
-                            localStorage.setItem(storageKey, ev.target.result);
-                            this.showToast('📷 Photo locally save ho gaya!', 'info');
+                            this.showToast('✅ Profile photo update ho gaya!', 'success');
+                        } else {
+                            throw new Error((data.error && data.error.message) || 'Upload failed');
                         }
+                    } catch(err) {
+                        console.error('Cloudinary Error:', err);
+                        this.showToast('❌ Upload fail: ' + (err.message || 'Check connection'), 'error');
+                    } finally {
                         this.isUploadingAvatar = false;
-                        // Input reset karo taki same image dobara bhi select ho sake
                         e.target.value = '';
-                    };
-                    reader.onerror = () => {
-                        this.showToast('Photo read nahi ho payi, dobara try karein.', 'error');
-                        this.isUploadingAvatar = false;
-                    };
-                    reader.readAsDataURL(file);
+                    }
                 },
                 async saveQrToGallery() {
                     if (!this.adminQrUrl) {
