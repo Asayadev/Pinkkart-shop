@@ -1090,7 +1090,7 @@
 
                                 </p>
                                 <p class="text-[10px]" :class="cartTotal >= 300 ? 'text-green-600' : 'text-gray-400'">
-                                    Min ₹300 order; use up to 10% cashback on order value.
+                                    Min ₹300 order; use up to 3% cashback on order value.
 
                                 </p>
                             </div>
@@ -1107,6 +1107,52 @@
                             </p>
                         </div>
                     </div>
+<!-- REWARD POINTS TOGGLE IN CART (VIP ONLY) -->
+<div v-if="loggedInUser && Number(loggedInUser.rewards) > 0 && isVipActive"
+     class="rounded-xl border mt-2 overflow-hidden bg-purple-50 border-purple-200">
+    <label class="flex items-center gap-2 cursor-pointer px-2.5 py-2">
+        <input type="checkbox" v-model="useRewardPoints"
+               class="w-3.5 h-3.5 accent-purple-600 rounded cursor-pointer flex-shrink-0">
+        <div class="flex-1">
+            <p class="text-[11px] font-bold text-purple-800">
+                ⭐ Use Reward Points ({{ Number(loggedInUser.rewards || 0) }} Pts available)
+            </p>
+            <p class="text-[9px] text-purple-600">
+                VIP Benefit: Order ka up to 2% points se pay karein (1 Pt = ₹1)
+            </p>
+        </div>
+        <span v-if="useRewardPoints && rewardPointsApplied > 0"
+              class="text-[11px] font-black text-purple-700 flex-shrink-0">
+            -₹{{ rewardPointsApplied.toFixed(2) }}
+        </span>
+    </label>
+</div>
+
+<!-- Non-VIP Lock Prompt -->
+<div v-else-if="loggedInUser && Number(loggedInUser.rewards) > 0 && !isVipActive"
+     @click="openVipPlans()"
+     class="rounded-xl border mt-2 p-2.5 bg-amber-50 border-amber-200 flex items-center justify-between cursor-pointer active:scale-98 transition">
+    <div class="flex items-center gap-2">
+        <i class="fas fa-lock text-amber-600 text-xs"></i>
+        <div>
+            <p class="text-[11px] font-bold text-amber-900">
+                ⭐ {{ Number(loggedInUser.rewards || 0) }} Points Lock Hain
+            </p>
+            <p class="text-[9px] text-amber-700">
+                In points ko use karne ke liye VIP Pass lein
+            </p>
+        </div>
+    </div>
+    <span class="text-[10px] font-black text-amber-700 bg-amber-200 px-2.5 py-1 rounded-full whitespace-nowrap">
+        Unlock VIP ›
+    </span>
+</div>
+
+<!-- Order Summary me Discount Line -->
+<div v-if="useRewardPoints && rewardPointsApplied > 0" class="flex justify-between text-xs text-purple-700 mt-1">
+    <span class="font-semibold flex items-center gap-1"><i class="fas fa-star text-xs"></i> Reward Points Discount</span>
+    <span class="font-bold">-₹{{ rewardPointsApplied.toFixed(2) }}</span>
+</div>
                     <!-- Delivery Charge Info -->
                     <div>
                         <div v-if="deliverySettings.isActive && deliveryChargeApplied > 0" class="mt-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-start gap-2">
@@ -1596,296 +1642,415 @@
 </div>
 </div>
 
-        <!-- ===== PROFILE TAB ===== -->
-        <div v-show="activeTab === 'profile'" class="profile-fade">
+               <!-- ===== PROFILE TAB ===== -->
+        <div v-show="activeTab === 'profile'" class="profile-fade pb-4 space-y-3.5 px-1">
 
             <!-- Not Logged In State -->
-            <div v-if="!loggedInUser" class="bg-white rounded-2xl p-10 text-center shadow-sm border border-dashed">
-                <div class="w-20 h-20 rounded-full bg-pink-50 border-2 border-dashed border-pink-300 flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-user-lock text-3xl text-pink-300"></i>
+            <div v-if="!loggedInUser" class="bg-white rounded-3xl p-8 text-center shadow-xs border border-gray-100 mt-2">
+                <div class="w-16 h-16 rounded-3xl bg-pink-50 text-pink-500 flex items-center justify-center mx-auto mb-3 shadow-xs">
+                    <i class="fas fa-user-lock text-2xl"></i>
                 </div>
-                <p class="font-bold text-gray-700 mb-1">Login Required</p>
-                <p class="text-xs text-gray-400 mb-4">Please login to view and edit your profile.</p>
-                <button @click="showLoginModal=true" class="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition shadow-sm shadow-pink-200">
-                    <i class="fas fa-sign-in-alt mr-1.5"></i> Login Now
+                <h3 class="font-black text-gray-800 text-base">Pinkkart Account</h3>
+                <p class="text-xs text-gray-400 mt-1 mb-5">Login karein apne orders track karne aur wallet cashback paane ke liye.</p>
+                <button @click="showLoginModal=true" class="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white py-3 rounded-2xl font-black text-xs transition shadow-md shadow-pink-200 active:scale-95">
+                    <i class="fas fa-sign-in-alt mr-1.5"></i> Login / Sign Up Karein
                 </button>
             </div>
 
-            <!-- Logged In: Profile Card -->
-            <div v-else class="space-y-4">
+            <!-- Logged In: Professional Profile Screen -->
+            <div v-else class="space-y-3.5">
 
-                <div class="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-4 shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 text-white"><i class="fas fa-crown text-lg"></i></div>
-                        <div class="min-w-0 flex-1">
-                            <template v-if="isVipActive">
-                                <p class="text-sm font-black text-amber-900">👑 VIP Member</p>
-                                <p class="text-xs font-bold text-amber-800">{{ vipMembership.planName }}</p>
-                                <p class="text-[10px] text-amber-700">Expires: {{ formatVipDate(vipMembership.expiryDate) }}</p>
-                            </template>
-                            <template v-else>
-                                <p class="text-sm font-black text-amber-900">Buy VIP Pass @ ₹{{ featuredVipPlan ? Number(featuredVipPlan.price).toFixed(0) : '199' }} - Get Flat {{ featuredVipPlan ? Number(featuredVipPlan.discount) : 10 }}% OFF &amp; {{ featuredVipPlan && !featuredVipPlan.freeDelivery ? 'VIP benefits' : 'Free Delivery' }}</p>
-                                <p class="text-[10px] text-amber-700">Your membership, benefits, and expiry appear here.</p>
-                            </template>
-                            <p v-if="vipMembershipRequest && vipMembershipRequest.status === 'pending'" class="mt-1 text-[10px] font-bold text-blue-700">VIP request pending verification.</p>
-                        </div>
-                        <button @click="openVipPlans()" class="rounded-xl bg-amber-500 px-3 py-2 text-[10px] font-black text-white">{{ isVipActive ? 'View / Renew' : 'Buy / Upgrade' }}</button>
-                    </div>
-                </div>
+                <!-- 1. Header Card (Modern Identity Card) -->
+                <div class="bg-white rounded-3xl p-4 border border-gray-100 shadow-xs relative overflow-hidden">
+                    <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-pink-50/60 rounded-full blur-2xl pointer-events-none"></div>
 
-                <!-- Header Banner + Avatar -->
-                <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-                    <!-- Top gradient banner -->
-                    <div class="h-24 bg-gradient-to-r from-pink-500 via-rose-400 to-fuchsia-500 relative">
-                        <div class="absolute inset-0 opacity-20" style="background-image:repeating-linear-gradient(45deg,rgba(255,255,255,0.15) 0,rgba(255,255,255,0.15) 1px,transparent 0,transparent 50%);background-size:12px 12px;"></div>
-                    </div>
-                    <!-- Avatar overlapping banner -->
-                    <div class="px-5 pb-5">
-                        <div class="flex items-end justify-between -mt-10 mb-3">
-                            <div class="relative cursor-pointer" @click="$refs.profileAvatarInput.click()" title="Change profile photo">
-                                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 to-fuchsia-500 flex items-center justify-center profile-avatar-ring border-4 border-white overflow-hidden">
-                                    <img v-if="userAvatarUrl" :src="userAvatarUrl" class="w-full h-full object-cover">
-                                    <span v-else class="text-3xl font-black text-white">{{ loggedInUser.name.charAt(0).toUpperCase() }}</span>
+                    <div class="flex items-center justify-between gap-3 relative z-10">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <!-- Avatar with Upload Icon -->
+                            <div class="relative cursor-pointer shrink-0" @click="$refs.profileAvatarInput.click()" title="Change profile photo">
+                                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 p-0.5 shadow-xs flex items-center justify-center">
+                                    <div class="w-full h-full bg-white rounded-[14px] overflow-hidden flex items-center justify-center">
+                                        <img v-if="userAvatarUrl" :src="userAvatarUrl" class="w-full h-full object-cover">
+                                        <span v-else class="text-lg font-black text-pink-600">{{ loggedInUser.name.charAt(0).toUpperCase() }}</span>
+                                    </div>
                                 </div>
-                                <!-- Upload overlay on hover -->
-                                <div class="absolute inset-0 rounded-full bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200">
-                                    <i class="fas fa-camera text-white text-lg"></i>
+                                <div v-if="isUploadingAvatar" class="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center">
+                                    <i class="fas fa-spinner fa-spin text-pink-500 text-xs"></i>
                                 </div>
-                                <!-- Loading spinner -->
-                                <div v-if="isUploadingAvatar" class="absolute inset-0 rounded-full bg-white/70 flex items-center justify-center border-4 border-white">
-                                    <i class="fas fa-spinner fa-spin text-pink-500 text-lg"></i>
-                                </div>
-                                <!-- Camera badge -->
-                                <span v-if="!isUploadingAvatar" class="absolute bottom-0 right-0 w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center border-2 border-white shadow">
-                                    <i class="fas fa-camera text-white" style="font-size:10px;"></i>
+                                <span v-if="!isUploadingAvatar" class="absolute -bottom-1 -right-1 w-5 h-5 bg-slate-900 text-white rounded-full flex items-center justify-center border-2 border-white text-[8px] shadow-xs">
+                                    <i class="fas fa-camera"></i>
                                 </span>
-                                <!-- Online dot -->
-                                <span v-if="!isUploadingAvatar" class="absolute top-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></span>
-                                <!-- Hidden file input -->
                                 <input type="file" accept="image/*" @change="handleAvatarUpload" class="hidden" ref="profileAvatarInput">
                             </div>
-                            <!-- Edit / Save / Cancel buttons -->
-                            <div class="flex gap-2 mt-2">
-                                <button v-if="!isEditingProfile" @click="toggleEditProfile"
-                                    class="flex items-center gap-1.5 bg-pink-50 border border-pink-200 text-pink-700 text-xs font-bold px-3 py-2 rounded-xl hover:bg-pink-100 transition">
-                                    <i class="fas fa-pen text-[10px]"></i> Edit Profile
-                                </button>
-                                <template v-else>
-                                    <button @click="saveProfile" :disabled="profileSaving"
-                                        class="flex items-center gap-1.5 bg-pink-500 hover:bg-pink-600 text-white text-xs font-bold px-3 py-2 rounded-xl transition shadow-sm shadow-pink-200 disabled:opacity-60">
-                                        <i v-if="profileSaving" class="fas fa-spinner fa-spin text-[10px]"></i>
-                                        <i v-else class="fas fa-check text-[10px]"></i>
-                                        {{ profileSaving ? 'Saving…' : 'Save' }}
-                                    </button>
-                                    <button @click="cancelEditProfile"
-                                        class="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold px-3 py-2 rounded-xl transition">
-                                        <i class="fas fa-times text-[10px]"></i> Cancel
-                                    </button>
-                                </template>
-                            </div>
-                        </div>
-                        <!-- Name & subtitle + Shop Logo -->
-                        <div class="flex items-center justify-between gap-3 mt-1">
-                            <div>
-                                <p class="text-lg font-black text-gray-800 leading-tight">{{ userProfile.name || loggedInUser.name }}</p>
-                                <p class="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                                    <i class="fas fa-mobile-alt text-pink-400"></i> +91 {{ userProfile.mobile || loggedInUser.phone }}
+
+                            <!-- Name & Phone -->
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <p class="text-sm font-black text-gray-900 leading-snug truncate">{{ userProfile.name || loggedInUser.name }}</p>
+                                    <span class="inline-flex items-center gap-1 text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-100">
+                                        <i class="fas fa-check-circle text-[8px]"></i> Verified
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-gray-400 font-semibold mt-0.5 flex items-center gap-1">
+                                    <i class="fas fa-phone-alt text-[9px] text-gray-300"></i> +91 {{ userProfile.mobile || loggedInUser.phone || '9999999999' }}
                                 </p>
                             </div>
-                            <!-- Shop Logo Upload -->
-                            <div class="flex flex-col items-center gap-1">
-                                <label class="relative cursor-pointer group" title="Upload shop logo">
-                                    <!-- Logo preview or placeholder -->
-                                    <div class="w-14 h-14 rounded-2xl border-2 flex items-center justify-center overflow-hidden transition-all"
-                                         :class="shopLogoUrl ? 'border-pink-300 bg-white shadow-md' : 'border-dashed border-gray-300 bg-gray-50 group-hover:border-pink-400 group-hover:bg-pink-50'">
-                                        <img v-if="shopLogoUrl" :src="shopLogoUrl" class="w-full h-full object-contain p-0.5">
-                                        <div v-else class="flex flex-col items-center gap-0.5 pointer-events-none">
-                                            <i class="fas fa-store text-gray-300 text-lg group-hover:text-pink-400 transition"></i>
-                                            <span class="text-[8px] text-gray-400 font-bold group-hover:text-pink-500">Logo</span>
-                                        </div>
-                                    </div>
-                                    <!-- Camera badge -->
-                                    <span class="absolute -bottom-1 -right-1 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center shadow border-2 border-white">
-                                        <i class="fas fa-camera text-white" style="font-size:8px;"></i>
-                                    </span>
-                                    <input type="file" accept="image/*" @change="uploadShopLogo" class="hidden">
-                                </label>
-                                <!-- Remove button if logo exists -->
-                                <button v-if="shopLogoUrl" @click="removeShopLogo"
-                                    class="text-[9px] text-red-400 hover:text-red-600 font-bold flex items-center gap-0.5 transition">
-                                    <i class="fas fa-trash-alt" style="font-size:8px;"></i> Remove
-                                </button>
-                            </div>
                         </div>
+
+                        <!-- Edit Button -->
+                        <button v-if="!isEditingProfile" @click="toggleEditProfile"
+                                class="shrink-0 bg-gray-50 hover:bg-pink-50 text-gray-700 hover:text-pink-600 text-xs font-bold px-3 py-2 rounded-xl border border-gray-200 transition active:scale-95 flex items-center gap-1">
+                            <i class="fas fa-pen text-[9px]"></i> <span>Edit</span>
+                        </button>
+                    </div>
+
+                    <!-- VIP Strip inside Header -->
+                    <div class="mt-3.5 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-black">
+                                <i class="fas fa-crown"></i>
+                            </span>
+                            <span v-if="isVipActive" class="font-extrabold text-amber-900 text-[11px]">VIP Member Active</span>
+                            <span v-else class="font-bold text-gray-600 text-[11px]">Free Shopper</span>
+                        </div>
+                        <button @click="openVipPlans()" class="text-[10px] font-black text-amber-700 hover:underline flex items-center gap-1">
+                            <span>{{ isVipActive ? 'Manage VIP' : 'Upgrade to VIP' }}</span>
+                            <i class="fas fa-chevron-right text-[8px]"></i>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Stats Row -->
-                <div class="flex gap-3">
-                    <div class="profile-stat-card">
-                        <p class="text-xl font-black text-pink-600">{{ userOrders.length }}</p>
-                        <p class="text-[10px] font-bold text-gray-500 mt-0.5">Total Orders</p>
-                    </div>
-                    <div class="profile-stat-card">
-                        <p class="text-xl font-black text-green-600">{{ userOrders.filter(o=>o.status==='delivered').length }}</p>
-                        <p class="text-[10px] font-bold text-gray-500 mt-0.5">Delivered</p>
-                    </div>
-                    <div class="profile-stat-card">
-                        <p class="text-xl font-black text-blue-600">{{ wishlist.length }}</p>
-                        <p class="text-[10px] font-bold text-gray-500 mt-0.5">Wishlist</p>
-                    </div>
-                </div>
-
-                <!-- Profile Fields Card -->
-                <div class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
-                    <div class="flex items-center gap-2 mb-1">
-                        <i class="fas fa-id-card text-pink-400"></i>
-                        <p class="text-sm font-black text-gray-800">Personal Information</p>
-                        <span v-if="isEditingProfile" class="ml-auto text-[10px] bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded-full">✏️ Editing</span>
-                    </div>
-
-                    <!-- Full Name -->
-                    <div>
-                        <p class="profile-label"><i class="fas fa-user"></i> Full Name</p>
-                        <div v-if="!isEditingProfile" class="profile-field-view">
-                            <i class="fas fa-user text-pink-300 text-xs flex-shrink-0"></i>
-                            <span>{{ userProfile.name || '—' }}</span>
-                        </div>
-                        <input v-else v-model="profileDraft.name" type="text" placeholder="Enter your full name"
-                            class="profile-field-edit" maxlength="60">
-                    </div>
-
-                    <!-- Mobile Number -->
-                    <div>
-                        <p class="profile-label"><i class="fas fa-mobile-alt"></i> Mobile Number</p>
-                        <div v-if="!isEditingProfile" class="profile-field-view">
-                            <i class="fas fa-mobile-alt text-pink-300 text-xs flex-shrink-0"></i>
-                            <span>+91 {{ userProfile.mobile || loggedInUser.phone || '—' }}</span>
-                        </div>
-                        <div v-else class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">+91</span>
-                            <input v-model="profileDraft.mobile" type="tel" placeholder="10-digit mobile number"
-                                class="profile-field-edit pl-10" maxlength="10" @input="profileDraft.mobile=profileDraft.mobile.replace(/\D/g,'')">
-                        </div>
-                        <p v-if="isEditingProfile && profileDraft.mobile && profileDraft.mobile.length !== 10"
-                            class="text-[10px] text-orange-500 font-semibold mt-1 flex items-center gap-1">
-                            <i class="fas fa-exclamation-circle"></i> 10 digits required
-                        </p>
-                    </div>
-
-                    <!-- Delivery Address -->
-                    <div>
-                        <p class="profile-label"><i class="fas fa-map-marker-alt"></i> Delivery Address</p>
-                        <div v-if="!isEditingProfile" class="profile-field-view" style="align-items:flex-start;padding-top:10px;min-height:56px;">
-                            <i class="fas fa-map-marker-alt text-pink-300 text-xs flex-shrink-0 mt-0.5"></i>
-                            <span style="white-space:pre-wrap;">{{ userProfile.address || '—' }}</span>
-                        </div>
-                        <textarea v-else v-model="profileDraft.address" rows="3" placeholder="Enter your full delivery address"
-                            class="profile-field-edit resize-none" style="padding-top:10px;"></textarea>
-                    </div>
-                </div>
-
-                <!-- ===== CASHBACK + REWARDS CARDS (side by side) ===== -->
-                <div class="flex gap-3">
-
+                <!-- 2. Wallet & Reward Assets Row (Dual Balance) -->
+                <div class="grid grid-cols-2 gap-2.5">
                     <!-- Cashback Wallet Card -->
-                    <div class="flex-1 rounded-2xl overflow-hidden shadow-sm p-4 flex flex-col gap-2"
-                         style="background: linear-gradient(135deg, #065f46 0%, #059669 55%, #10b981 100%);">
-                        <div class="flex items-center gap-2">
-                            <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-wallet text-white text-base"></i>
-                            </div>
-                            <div>
-                                <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Cashback</p>
-                                <p class="text-white text-xl font-black leading-tight">₹{{ Number(loggedInUser.cashback || 0).toFixed(2) }}</p>
-                            </div>
+                    <div class="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-3.5 text-white shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[92px]">
+                        <div class="flex justify-between items-start">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-100">Pinkkart Wallet</span>
+                            <i class="fas fa-wallet text-emerald-200/50 text-sm"></i>
                         </div>
-                        <div class="border-t border-white/20 pt-2">
-                            <p class="text-white/60 text-[9px] font-bold uppercase">Total Saved</p>
-                            <p class="text-white font-black text-sm">₹{{ userOrders.reduce((s,o)=>s+Number(o.cashbackUsed||0),0).toFixed(2) }}</p>
-                        </div>
-                        <div v-if="Number(loggedInUser.cashback || 0) > 0"
-                             class="mt-auto bg-white text-green-700 font-black text-[9px] px-2 py-1 rounded-full self-start flex items-center gap-1 shadow">
-                            <i class="fas fa-check-circle text-[8px]"></i> Active
-                        </div>
-                        <div v-else class="mt-auto bg-white/20 text-white/60 font-bold text-[9px] px-2 py-1 rounded-full self-start">
-                            No Balance
+                        <div>
+                            <p class="text-xl font-black leading-none tracking-tight">₹{{ Number(loggedInUser.cashback || 0).toFixed(2) }}</p>
+                            <p class="text-[9px] text-emerald-200 font-semibold mt-1">Closed-loop order cashback</p>
                         </div>
                     </div>
 
                     <!-- Reward Points Card -->
-                    <div class="flex-1 rounded-2xl overflow-hidden shadow-sm p-4 flex flex-col gap-2"
-                         style="background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 55%, #a78bfa 100%);">
-                        <div class="flex items-center gap-2">
-                            <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-star text-white text-base"></i>
-                            </div>
-                            <div>
-                                <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Rewards</p>
-                                <p class="text-white text-xl font-black leading-tight">{{ Number(loggedInUser.rewards || 0) }} <span class="text-sm font-bold">Pts</span></p>
-                            </div>
+                    <div class="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-3.5 text-white shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[92px]">
+                        <div class="flex justify-between items-start">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-100">Reward Points</span>
+                            <i class="fas fa-star text-indigo-200/50 text-sm"></i>
                         </div>
-                        <div class="border-t border-white/20 pt-2">
-                            <p class="text-white/60 text-[9px] font-bold uppercase">Total Earned</p>
-                            <p class="text-white font-black text-sm">{{ userOrders.reduce((s,o)=>s+Number(o.rewardPoints||0),0) }} Pts</p>
-                        </div>
-                        <div v-if="Number(loggedInUser.rewards || 0) > 0"
-                             class="mt-auto bg-white text-purple-700 font-black text-[9px] px-2 py-1 rounded-full self-start flex items-center gap-1 shadow">
-                            <i class="fas fa-gift text-[8px]"></i> Active
-                        </div>
-                        <div v-else class="mt-auto bg-white/20 text-white/60 font-bold text-[9px] px-2 py-1 rounded-full self-start">
-                            No Points
+                        <div>
+                            <p class="text-xl font-black leading-none tracking-tight">{{ Number(loggedInUser.rewards || 0) }} <span class="text-xs font-bold text-indigo-200">Pts</span></p>
+                            <p class="text-[9px] text-indigo-200 font-semibold mt-1">1 Point = ₹1 on VIP checkout</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Recent Cashback Used (below cards) — scrollable -->
-                <div v-if="userOrders.some(o => Number(o.cashbackUsed) > 0)"
-                     class="rounded-2xl bg-green-50 border border-green-100 px-4 py-3">
-                    <p class="text-green-700 text-[10px] font-bold uppercase tracking-wider mb-2">
-                        <i class="fas fa-history mr-1"></i> Recent Cashback Used
+                <!-- 3. Key Metrics (4-Pillars Quick Stats) -->
+                <div class="bg-white rounded-3xl p-3.5 border border-gray-100 shadow-xs grid grid-cols-4 gap-1 text-center">
+                    <div class="cursor-pointer active:scale-95 transition" @click="activeTab='orders'">
+                        <p class="text-base font-black text-gray-800 leading-tight">{{ userOrders.length }}</p>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase mt-0.5">Orders</p>
+                    </div>
+                    <div class="cursor-pointer active:scale-95 transition" @click="activeTab='orders'">
+                        <p class="text-base font-black text-emerald-600 leading-tight">{{ userOrders.filter(o=>o.status==='delivered').length }}</p>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase mt-0.5">Delivered</p>
+                    </div>
+                    <div class="cursor-pointer active:scale-95 transition" @click="activeTab='wishlist'">
+                        <p class="text-base font-black text-pink-600 leading-tight">{{ wishlist.length }}</p>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase mt-0.5">Wishlist</p>
+                    </div>
+                    <div>
+                        <p class="text-base font-black text-indigo-600 leading-tight">₹{{ userOrders.reduce((s,o)=>s+Number(o.cashbackUsed||0),0).toFixed(0) }}</p>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase mt-0.5">Saved</p>
+                    </div>
+                </div>
+
+                <!-- 4. Profile Editing Panel (Shown only when Edit is active) -->
+                <div v-if="isEditingProfile" class="bg-white rounded-3xl border border-pink-200 p-4 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between pb-2 border-b border-gray-100">
+                        <p class="text-xs font-black text-gray-800 flex items-center gap-1.5">
+                            <i class="fas fa-edit text-pink-500"></i> Edit Profile Details
+                        </p>
+                        <span class="text-[10px] text-gray-400 font-semibold">Instant cloud sync</span>
+                    </div>
+
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase mb-1">Full Name</p>
+                        <input v-model="profileDraft.name" type="text" placeholder="Enter your full name" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none focus:border-pink-500">
+                    </div>
+
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase mb-1">Mobile Number</p>
+                        <input v-model="profileDraft.mobile" type="tel" maxlength="10" placeholder="10-digit mobile number" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none focus:border-pink-500">
+                    </div>
+
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase mb-1">Default Delivery Address</p>
+                        <textarea v-model="profileDraft.address" rows="2" placeholder="Full village / street address" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none focus:border-pink-500 resize-none"></textarea>
+                    </div>
+
+                    <div class="flex gap-2 pt-1">
+                        <button @click="cancelEditProfile" class="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl font-bold text-xs transition active:scale-95">Cancel</button>
+                        <button @click="saveProfile" :disabled="profileSaving" class="flex-1 bg-pink-500 hover:bg-pink-600 text-white py-2.5 rounded-xl font-black text-xs transition active:scale-95 shadow-sm shadow-pink-200 flex items-center justify-center gap-1">
+                            <i v-if="profileSaving" class="fas fa-spinner fa-spin"></i>
+                            <span>{{ profileSaving ? 'Saving...' : 'Save Changes' }}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 5. Default Address Card (Read Mode) -->
+                <div v-else class="bg-white rounded-3xl p-4 border border-gray-100 shadow-xs">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fas fa-map-marker-alt text-pink-500"></i> Saved Delivery Address
+                        </p>
+                        <button @click="toggleEditProfile" class="text-[10px] font-bold text-pink-600 hover:underline">Change</button>
+                    </div>
+                    <p class="text-xs font-bold text-gray-700 leading-relaxed">
+                        {{ userProfile.address || loggedInUser.address || 'Koi address save nahi hai. "Change" par tap karke address add karein.' }}
                     </p>
-                    <div class="space-y-1.5 overflow-y-auto" style="max-height:160px;">
-                        <div v-for="o in userOrders.filter(o=>Number(o.cashbackUsed)>0).slice().sort((a,b)=>new Date(b.date)-new Date(a.date))" :key="o.id"
-                             class="flex items-center justify-between bg-white rounded-xl px-3 py-2 shadow-sm">
-                            <div>
-                                <p class="text-gray-800 text-[11px] font-bold">#{{ o.id.slice(-6).toUpperCase() }}</p>
-                                <p class="text-gray-400 text-[10px]">{{ o.date ? new Date(o.date).toLocaleDateString('en-IN') : '' }}</p>
-                            </div>
-                            <span class="text-green-600 font-black text-xs bg-green-100 px-2.5 py-1 rounded-full">
-                                -₹{{ Number(o.cashbackUsed).toFixed(2) }}
+                </div>
+
+                <!-- 6. Monthly Challenge & Milestone Cards -->
+                              <!-- ===== MONTHLY TOP SHOPPERS LEADERBOARD CARD ===== -->
+                <div class="rounded-3xl p-4 shadow-xs border border-amber-200 overflow-hidden text-gray-800"
+                     style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fff7ed 100%);">
+                    
+                    <div class="flex items-center justify-between pb-3 border-b border-amber-200/80">
+                        <div class="flex items-center gap-2">
+                            <span class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center text-sm shadow-xs">
+                                <i class="fas fa-trophy"></i>
                             </span>
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <p class="text-xs font-black text-amber-950 uppercase tracking-wide">Monthly Shopping Challenge</p>
+                                    <span class="bg-red-500 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full animate-pulse">GIFTS</span>
+                                </div>
+                                <p class="text-[10px] text-amber-800 font-semibold">Top buyers paayein home gifts!</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-black bg-amber-200/80 text-amber-900 px-2.5 py-1 rounded-full border border-amber-300">
+                            {{ currentMonthName }}
+                        </span>
+                    </div>
+
+                    <!-- 3 Podiums Rank 1, 2, 3 -->
+                    <div class="grid grid-cols-3 gap-2 my-3 text-center">
+                        <div class="bg-white/90 rounded-2xl p-2 border border-amber-200 shadow-2xs">
+                            <span class="text-base">🥇</span>
+                            <p class="text-[9px] font-black text-amber-950 mt-0.5">Rank 1</p>
+                            <p class="text-[8px] font-bold text-emerald-700 leading-tight">Mixer Grinder</p>
+                        </div>
+                        <div class="bg-white/90 rounded-2xl p-2 border border-slate-200 shadow-2xs">
+                            <span class="text-base">🥈</span>
+                            <p class="text-[9px] font-black text-slate-800 mt-0.5">Rank 2</p>
+                            <p class="text-[8px] font-bold text-emerald-700 leading-tight">Electric Kettle</p>
+                        </div>
+                        <div class="bg-white/90 rounded-2xl p-2 border border-amber-200 shadow-2xs">
+                            <span class="text-base">🥉</span>
+                            <p class="text-[9px] font-black text-amber-950 mt-0.5">Rank 3</p>
+                            <p class="text-[8px] font-bold text-emerald-700 leading-tight">Ration Hamper</p>
+                        </div>
+                    </div>
+
+                    <!-- Shoppers List (Scrollable upto 10) -->
+                    <div class="space-y-1.5 bg-white/70 p-2.5 rounded-2xl border border-amber-200/60">
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="text-[9px] font-black text-amber-900 uppercase tracking-wider flex items-center gap-1">
+                                <i class="fas fa-crown text-amber-500"></i> Top Shoppers (Rank 1 to 10)
+                            </p>
+                            <span class="text-[9px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Live Ranking</span>
+                        </div>
+
+                        <div v-if="topShoppers.length === 0" class="text-center py-2.5 text-[10px] font-bold text-amber-800">
+                            Is mahine ka contest shuru ho chuka hai! Pehla order karein!
+                        </div>
+
+                        <!-- 10 Shoppers List (Scrollable box) -->
+                        <div v-else class="space-y-1 max-h-44 overflow-y-auto no-scrollbar pr-0.5">
+                            <div v-for="(shopper, index) in topShoppers" :key="shopper.uid"
+                                 class="flex items-center justify-between px-2.5 py-1.5 rounded-xl border transition"
+                                 :class="(myRankInfo && myRankInfo.rank === (index + 1)) ? 'bg-amber-100/90 border-amber-300 font-black' : 'bg-white border-amber-100 shadow-2xs'">
+                                
+                                <div class="flex items-center gap-2">
+                                    <!-- Rank Number Badge -->
+                                    <span class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black"
+                                          :class="index === 0 ? 'bg-amber-400 text-amber-950' : 
+                                                  index === 1 ? 'bg-slate-300 text-slate-900' : 
+                                                  index === 2 ? 'bg-orange-300 text-orange-950' : 
+                                                  'bg-gray-100 text-gray-700'">
+                                        #{{ index + 1 }}
+                                    </span>
+                                    
+                                    <p class="text-[11px] font-bold text-gray-800">
+                                        {{ shopper.name }} 
+                                        <span class="text-[9px] font-mono text-gray-400">({{ shopper.maskedPhone }})</span>
+                                        <span v-if="myRankInfo && myRankInfo.rank === (index + 1)" class="ml-1 text-[8px] bg-pink-500 text-white px-1.5 py-0.2 rounded-full">YOU</span>
+                                    </p>
+                                </div>
+                                <span class="text-[11px] font-black text-emerald-700">₹{{ shopper.totalSpent.toFixed(0) }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User ka Apna Rank Banner -->
+                    <div class="mt-2.5 pt-2 border-t border-amber-200 flex items-center justify-between text-xs font-bold text-amber-950">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[11px]">Aapka Status:</span>
+                            <span v-if="myRankInfo && myRankInfo.rank !== 'N/A'" 
+                                  class="text-[10px] font-black px-2 py-0.5 rounded-full"
+                                  :class="myRankInfo.inTop3 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-200 text-amber-900'">
+                                Rank #{{ myRankInfo.rank }}
+                            </span>
+                            <span v-else class="text-[10px] text-gray-500">Abhi Rank nahi bani</span>
+                        </div>
+                        <span class="font-black text-emerald-700 text-xs">Total: ₹{{ myMonthlySpent.toFixed(2) }}</span>
+                    </div>
+
+                    <!-- Target Alert: Agar user Top 3 me nahi hai -->
+                    <div v-if="myRankInfo && !myRankInfo.inTop3 && myRankInfo.rank !== 'N/A'" 
+                         class="mt-2 p-2 bg-white/80 rounded-xl border border-amber-200 text-center">
+                        <p class="text-[10px] font-bold text-rose-600">
+                            🎁 Gift jeetne (Rank 3) ke liye sirf <strong class="underline">₹{{ myRankInfo.gapToTop3.toFixed(0) }}</strong> ki shopping aur karein!
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 7. Refer & Earn Box -->
+                <div class="rounded-3xl p-4 text-white shadow-xs flex items-center justify-between"
+                     style="background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);">
+                    <div class="min-w-0 pr-2">
+                        <p class="text-[9px] font-bold uppercase tracking-wider text-pink-100">Invite & Earn 🎁</p>
+                        <p class="text-xs font-black mt-0.5">Dost ko bulayein, paayein 10 Pts</p>
+                        <p class="text-[10px] text-pink-100 mt-0.5">
+                            Code: <strong class="bg-white/20 px-1.5 py-0.5 rounded-md text-white font-mono">{{ loggedInUser.phone || loggedInUser.uid }}</strong>
+                        </p>
+                    </div>
+                    <button @click="shareReferralLink" class="bg-white text-pink-600 px-3.5 py-2 rounded-2xl text-xs font-black shadow-xs active:scale-95 transition flex items-center gap-1.5 shrink-0">
+                        <span>Share</span>
+                        <i class="fas fa-share-nodes text-[10px]"></i>
+                    </button>
+                </div>
+
+                <!-- 8. Shopping Milestone Progress Card -->
+                <div class="bg-white rounded-3xl p-4 shadow-xs border border-gray-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xs font-black">
+                                <i class="fas fa-medal"></i>
+                            </span>
+                            <div>
+                                <p class="text-xs font-black text-gray-800">Shopping Milestone</p>
+                                <p class="text-[10px] text-gray-400">Total Bought: <strong class="text-pink-600">{{ currentMilestoneBought }} Products</strong></p>
+                            </div>
+                        </div>
+                        <span class="bg-pink-50 text-pink-600 font-black text-[10px] px-2.5 py-1 rounded-full border border-pink-100">
+                            +{{ nextMilestoneReward }} Pts
+                        </span>
+                    </div>
+
+                    <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden mb-1.5 relative">
+                        <div class="bg-gradient-to-r from-pink-500 to-rose-500 h-full rounded-full transition-all duration-500"
+                             :style="{ width: milestoneProgressPercent + '%' }"></div>
+                    </div>
+
+                    <div class="flex justify-between text-[10px] font-bold text-gray-500">
+                        <span>Target: {{ nextMilestoneTarget }} Products</span>
+                        <span class="text-pink-600">{{ Math.max(0, nextMilestoneTarget - currentMilestoneBought) }} aur khareedein</span>
+                    </div>
+                </div>
+
+                <!-- ===== RECENT CASHBACK & REWARDS USED HISTORY ===== -->
+                <div v-if="userOrders.some(o => Number(o.cashbackUsed) > 0 || Number(o.rewardPointsUsed) > 0)"
+                     class="bg-white rounded-3xl border border-gray-100 p-4 shadow-xs">
+                    
+                    <div class="flex items-center justify-between mb-2.5 pb-2 border-b border-gray-50">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center text-[10px]">
+                                <i class="fas fa-receipt"></i>
+                            </span>
+                            <p class="text-xs font-black text-gray-800 tracking-wide">Wallet & Points History</p>
+                        </div>
+                        <span class="text-[9px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">Order Deductions</span>
+                    </div>
+
+                    <div class="space-y-2 overflow-y-auto no-scrollbar" style="max-height: 180px;">
+                        <div v-for="o in userOrders.filter(o => Number(o.cashbackUsed) > 0 || Number(o.rewardPointsUsed) > 0).slice().sort((a,b)=>new Date(b.date)-new Date(a.date))" 
+                             :key="o.id"
+                             class="flex items-center justify-between bg-gray-50/80 rounded-2xl px-3 py-2 border border-gray-100/80">
+                            <div>
+                                <p class="text-gray-800 text-[11px] font-black tracking-wide font-mono">#{{ o.id.slice(-6).toUpperCase() }}</p>
+                                <p class="text-gray-400 text-[9px] font-medium mt-0.5">{{ o.date ? new Date(o.date).toLocaleDateString('en-IN') : '' }}</p>
+                            </div>
+                            
+                            <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                                <!-- Cashback Used Badge -->
+                                <span v-if="Number(o.cashbackUsed) > 0" 
+                                      class="inline-flex items-center gap-1 text-emerald-700 font-black text-[10px] bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full">
+                                    <i class="fas fa-wallet text-[9px] text-emerald-600"></i>
+                                    -₹{{ Number(o.cashbackUsed).toFixed(2) }}
+                                </span>
+                                
+                                <!-- Reward Points Used Badge -->
+                                <span v-if="Number(o.rewardPointsUsed) > 0" 
+                                      class="inline-flex items-center gap-1 text-purple-700 font-black text-[10px] bg-purple-50 border border-purple-200/60 px-2 py-0.5 rounded-full">
+                                    <i class="fas fa-star text-[9px] text-purple-600"></i>
+                                    -{{ Number(o.rewardPointsUsed).toFixed(0) }} Pts
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Account Actions -->
-                <div class="bg-white rounded-2xl shadow-sm p-4 space-y-2">
-                    <p class="text-xs font-black text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5"><i class="fas fa-cog text-gray-400"></i> Account</p>
+                <!-- 9. Quick Actions & Navigation List (Clean Studio Style) -->
+                <div class="bg-white rounded-3xl border border-gray-100 shadow-xs divide-y divide-gray-50 overflow-hidden">
                     <button @click="activeTab='orders'; history.pushState({page:'tab'},'')"
-                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition">
-                        <i class="fas fa-box w-4 text-center"></i>
-                        <span>My Orders</span>
-                        <i class="fas fa-chevron-right ml-auto text-xs text-blue-400"></i>
+                            class="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 transition active:scale-98">
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
+                                <i class="fas fa-box"></i>
+                            </span>
+                            <span class="text-xs font-bold text-gray-800">My Orders History</span>
+                        </div>
+                        <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
                     </button>
+
                     <button @click="activeTab='wishlist'; history.pushState({page:'tab'},'')"
-                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm font-semibold hover:bg-red-100 transition">
-                        <i class="fas fa-heart w-4 text-center"></i>
-                        <span>My Wishlist</span>
-                        <span v-if="wishlist.length" class="ml-auto text-[10px] bg-red-500 text-white font-bold px-2 py-0.5 rounded-full">{{ wishlist.length }}</span>
-                        <i class="fas fa-chevron-right ml-1 text-xs text-red-400"></i>
+                            class="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 transition active:scale-98">
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center text-xs">
+                                <i class="fas fa-heart"></i>
+                            </span>
+                            <span class="text-xs font-bold text-gray-800">My Saved Wishlist</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span v-if="wishlist.length" class="text-[10px] bg-red-100 text-red-600 font-black px-2 py-0.2 rounded-full">{{ wishlist.length }}</span>
+                            <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
+                        </div>
                     </button>
+
                     <button @click="toggleTheme"
-                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 text-sm font-semibold hover:bg-indigo-100 transition">
-                        <i :class="isDark ? 'fas fa-sun' : 'fas fa-moon'" class="w-4 text-center"></i>
-                        <span>{{ isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode' }}</span>
-                        <i class="fas fa-chevron-right ml-auto text-xs text-indigo-400"></i>
+                            class="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 transition active:scale-98">
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+                                <i :class="isDark ? 'fas fa-sun' : 'fas fa-moon'"></i>
+                            </span>
+                            <span class="text-xs font-bold text-gray-800">{{ isDark ? 'Light Mode' : 'Dark Mode' }}</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-gray-400">{{ isDark ? 'Active' : 'Off' }}</span>
                     </button>
+
                     <button @click="logout"
-                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-red-500 text-sm font-semibold hover:bg-red-50 transition">
-                        <i class="fas fa-sign-out-alt w-4 text-center"></i>
-                        <span>Logout</span>
-                        <i class="fas fa-chevron-right ml-auto text-xs text-gray-300"></i>
+                            class="w-full flex items-center justify-between p-3.5 hover:bg-red-50 text-red-500 transition active:scale-98">
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center text-xs">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </span>
+                            <span class="text-xs font-bold">Logout from Account</span>
+                        </div>
+                        <i class="fas fa-arrow-right text-[10px] text-red-300"></i>
                     </button>
                 </div>
 
@@ -2032,15 +2197,15 @@
             <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden" style="animation:pkModalIn 0.4s cubic-bezier(0.34,1.3,0.64,1) both;">
 
                 <!-- ===== HEADER GRADIENT ===== -->
-                <div style="background:linear-gradient(135deg,#f857a6 0%,#ff5858 100%);padding:28px 24px 22px;position:relative;text-align:center;">
+              <div style="background:linear-gradient(135deg,#f857a6 0%,#ff5858 100%);padding:8px 12px 8px;position:relative;text-align:center;">
                     <!-- Close button -->
                     <button @click="showLoginModal=false" style="position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.25);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;">
                         <i class="fas fa-times"></i>
                     </button>
                     <!-- Icon -->
-                    <div style="width:60px;height:60px;border-radius:18px;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px;box-shadow:0 4px 16px rgba(0,0,0,0.15);">
+                    <div style="width:38px;height:38px;border-radius:18px;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px;box-shadow:0 4px 16px rgba(0,0,0,0.15);">
                         <span v-if="authMode==='login'">🛍️</span>
-                        <span v-else>✨</span>
+                        <span v-else>🛍️</span>
                     </div>
                     <h2 style="color:white;font-size:20px;font-weight:900;margin:0 0 3px;letter-spacing:-0.3px;">
                         <span v-if="authMode==='login'">Pinkkart Login</span>
@@ -2066,26 +2231,16 @@
                 </div>
 
                 <!-- ===== BODY ===== -->
-                <div style="padding:22px 22px 20px;max-height:65vh;overflow-y:auto;">
+                <div style="padding:14px 16px 12px;max-height:75vh;overflow-y:auto;">
 
                 <!-- Checkout context banner -->
                 <div v-if="pendingAction === 'checkout'" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid #fcd34d;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:11px;font-weight:700;color:#92400e;display:flex;align-items:center;gap:8px;">
                     <span style="font-size:18px;">🛒</span>
                     <div>
                         <p style="font-weight:900;font-size:12px;color:#78350f;">Order place karne ke liye account chahiye!</p>
-                        <p style="font-weight:600;color:#92400e;margin-top:2px;">Sign up karein ya login karein — sirf 30 seconds lagenge ✨</p>
+                        <p style="font-weight:600;color:#92400e;margin-top:2px;">Sign up karein ya login karein — sirf 30 seconds lagenge 🛍️</p>
                     </div>
                 </div>
-
-                <!-- Firebase connected badge (signup only) -->
-                    <div v-if="authMode==='signup'" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:9px 12px;margin-bottom:16px;font-size:11px;font-weight:700;color:#16a34a;display:flex;align-items:center;gap:7px;">
-                        <i class="fas fa-check-circle"></i> Firebase Connected! Data save hoga database mein
-                    </div>
-
-                    <!-- Error -->
-                    <div v-if="emailAuthError" style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;padding:9px 12px;margin-bottom:14px;font-size:11px;font-weight:700;color:#dc2626;display:flex;align-items:center;gap:7px;">
-                        <i class="fas fa-exclamation-circle"></i> {{ emailAuthError }}
-                    </div>
 
                     <!-- ===== LOGIN FORM ===== -->
                     <div v-if="authMode==='login'" style="display:flex;flex-direction:column;gap:14px;">
@@ -2112,7 +2267,7 @@
                                 </p>
                                 <div style="position:relative;">
                                     <i class="fas fa-user" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#d1d5db;font-size:12px;"></i>
-                                    <input type="text" v-model="loginForm.name" placeholder="Aapka pura naam" style="width:100%;padding:12px 14px 12px 36px;border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;outline:none;box-sizing:border-box;transition:border-color 0.2s,box-shadow 0.2s;" onfocus="this.style.borderColor='#f857a6';this.style.boxShadow='0 0 0 3px rgba(248,87,166,0.12)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+                                    <input type="text" v-model="loginForm.name" placeholder="Aapka pura naam" style="width:100%;padding:8px 12px 8px 32px;border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;outline:none;box-sizing:border-box;transition:border-color 0.2s,box-shadow 0.2s;" onfocus="this.style.borderColor='#f857a6';this.style.boxShadow='0 0 0 3px rgba(248,87,166,0.12)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
                                 </div>
                             </div>
                             <div>
@@ -2121,7 +2276,7 @@
                                 </p>
                                 <div style="position:relative;">
                                     <i class="fas fa-mobile-alt" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#d1d5db;font-size:12px;"></i>
-                                    <input type="tel" v-model="loginForm.phone" placeholder="10-digit number" maxlength="10" style="width:100%;padding:12px 14px 12px 36px;border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;outline:none;box-sizing:border-box;transition:border-color 0.2s,box-shadow 0.2s;" onfocus="this.style.borderColor='#f857a6';this.style.boxShadow='0 0 0 3px rgba(248,87,166,0.12)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+                                    <input type="tel" v-model="loginForm.phone" placeholder="10-digit number" maxlength="10" style="width:100%;padding:8px 12px 8px 32px;border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;outline:none;box-sizing:border-box;transition:border-color 0.2s,box-shadow 0.2s;" onfocus="this.style.borderColor='#f857a6';this.style.boxShadow='0 0 0 3px rgba(248,87,166,0.12)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
                                 </div>
                             </div>
                             <button @click="submitLogin" style="width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(90deg,#f857a6,#ff5858);color:white;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(248,87,166,0.38);transition:transform 0.15s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
@@ -2137,7 +2292,7 @@
                                 </p>
                                 <div style="position:relative;">
                                     <i class="fas fa-envelope" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#d1d5db;font-size:12px;"></i>
-                                    <input type="email" v-model="emailForm.email" placeholder="email@gmail.com" style="width:100%;padding:12px 14px 12px 36px;border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#f857a6';this.style.boxShadow='0 0 0 3px rgba(248,87,166,0.12)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+                                    <input type="email" v-model="emailForm.email" placeholder="email@gmail.com" style="width:100%;padding:8px 12px 8px 32px;border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#f857a6';this.style.boxShadow='0 0 0 3px rgba(248,87,166,0.12)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
                                 </div>
                             </div>
                             <div>
@@ -2167,7 +2322,7 @@
                     </div>
 
                     <!-- ===== SIGNUP FORM ===== -->
-                    <div v-if="authMode==='signup'" style="display:flex;flex-direction:column;gap:14px;">
+                    <div v-if="authMode==='signup'" style="display:flex;flex-direction:column;gap:9px;">
 
                         <!-- Sub-toggle -->
                         <div style="display:flex;gap:8px;">
@@ -2189,7 +2344,8 @@
                                 <p style="font-size:10px;font-weight:800;color:#374151;letter-spacing:0.7px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><span>👤</span> FULL NAME</p>
                                 <div style="position:relative;">
                                     <i class="fas fa-user" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#d1d5db;font-size:12px;"></i>
-                                    <input type="text" v-model="signupForm.name" placeholder="Aapka pura naam" style="width:100%;padding:12px 14px 12px 36px;border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#f857a6';this.style.boxShadow='0 0 0 3px rgba(248,87,166,0.12)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
+                                    <input type="text" v-model="signupForm.name" placeholder="Aapka pura naam" style="width:100%;padding:8px 12px 8px 34px; font-size:12px;
+border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#f857a6';this.style.boxShadow='0 0 0 3px rgba(248,87,166,0.12)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
                                 </div>
                             </div>
                             <div>
@@ -2220,6 +2376,17 @@
                                     <input type="tel" v-model="emailSignupForm.mobile" placeholder="10-digit number" maxlength="10" style="width:100%;padding:12px 14px 12px 36px;border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#f857a6';this.style.boxShadow='0 0 0 3px rgba(248,87,166,0.12)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
                                 </div>
                             </div>
+<!-- REFERRAL CODE BOX -->
+<div>
+    <p style="font-size:10px;font-weight:800;color:#374151;letter-spacing:0.7px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px;">
+    <span>🎁</span> REFERRAL CODE (PAAYEIN 10 REWARD POINTS)
+</p>
+    <div style="position:relative;">
+        <i class="fas fa-gift" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#d1d5db;font-size:12px;"></i>
+        <input type="text" v-model="emailSignupForm.referralCode" placeholder="Dost ka mobile number / code" 
+               style="width:100%;padding:12px 14px 12px 36px;border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;outline:none;box-sizing:border-box;">
+    </div>
+</div>
                             <div>
                                 <p style="font-size:10px;font-weight:800;color:#374151;letter-spacing:0.7px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><span>📧</span> EMAIL ADDRESS</p>
                                 <div style="position:relative;">
@@ -2347,7 +2514,7 @@
                                              Use Cashback Wallet (₹{{ Number(loggedInUser.cashback || 0).toFixed(2) }})
                                         </p>
                                         <p class="text-[9px]" :class="cartTotal >= 300 ? 'text-green-600' : 'text-gray-400'">
-                                             ₹300+ order par wallet balance se up to 10% cashback use karein.
+                                             ₹300+ order par wallet balance se up to 3% cashback use karein.
                                         </p>
                                     </div>
                                     <span v-if="useCashback && cashbackApplied > 0"
@@ -2361,6 +2528,53 @@
                                     <p class="text-[9px] text-amber-700 font-semibold">Min ₹300 cart required (abhi ₹{{ cartTotal.toFixed(0) }})</p>
                                 </div>
                             </div>
+<!-- REWARD POINTS TOGGLE IN CHECKOUT POPUP (VIP ONLY) -->
+<div v-if="loggedInUser && Number(loggedInUser.rewards) > 0 && isVipActive"
+     class="rounded-xl border mt-2 overflow-hidden bg-purple-50 border-purple-200">
+    <label class="flex items-center gap-2 cursor-pointer px-2.5 py-2">
+        <input type="checkbox" v-model="useRewardPoints"
+               class="w-3.5 h-3.5 accent-purple-600 rounded cursor-pointer flex-shrink-0">
+        <div class="flex-1">
+            <p class="text-[11px] font-bold text-purple-800">
+                ⭐ Use Reward Points ({{ Number(loggedInUser.rewards || 0) }} Pts available)
+            </p>
+            <p class="text-[9px] text-purple-600">
+                VIP Benefit: Order ka up to 2% points se pay karein (1 Pt = ₹1)
+            </p>
+        </div>
+        <span v-if="useRewardPoints && rewardPointsApplied > 0"
+              class="text-[11px] font-black text-purple-700 flex-shrink-0">
+            -₹{{ rewardPointsApplied.toFixed(2) }}
+        </span>
+    </label>
+</div>
+
+<!-- Non-VIP Lock Prompt -->
+<div v-else-if="loggedInUser && Number(loggedInUser.rewards) > 0 && !isVipActive"
+     @click="openVipPlans()"
+     class="rounded-xl border mt-2 p-2.5 bg-amber-50 border-amber-200 flex items-center justify-between cursor-pointer active:scale-98 transition">
+    <div class="flex items-center gap-2">
+        <i class="fas fa-lock text-amber-600 text-xs"></i>
+        <div>
+            <p class="text-[11px] font-bold text-amber-900">
+                ⭐ {{ Number(loggedInUser.rewards || 0) }} Points Lock Hain
+            </p>
+            <p class="text-[9px] text-amber-700">
+                In points ko use karne ke liye VIP Pass lein
+            </p>
+        </div>
+    </div>
+    <span class="text-[10px] font-black text-amber-700 bg-amber-200 px-2.5 py-1 rounded-full whitespace-nowrap">
+        Unlock VIP ›
+    </span>
+</div>
+
+<!-- Order Summary me Discount Line -->
+<div v-if="useRewardPoints && rewardPointsApplied > 0" class="flex justify-between text-xs text-purple-700 mt-1">
+    <span class="font-semibold flex items-center gap-1"><i class="fas fa-star text-xs"></i> Reward Points Discount</span>
+    <span class="font-bold">-₹{{ rewardPointsApplied.toFixed(2) }}</span>
+</div>
+                      
                             <div v-if="useCashback && cashbackApplied > 0" class="flex justify-between text-xs text-green-600 mt-1">
                                 <span class="font-semibold flex items-center gap-1"><i class="fas fa-wallet text-xs"></i> Cashback Discount</span>
                                 <span class="font-bold">-₹{{ cashbackApplied.toFixed(2) }}</span>
@@ -2445,12 +2659,12 @@
                         <i class="fas fa-check-circle"></i> Place Order (COD)
                     </button>
 
-                    <!-- WhatsApp Help -->
-                    <div class="text-center mt-1 mb-1">
-                        <a href="https://wa.me/917847853652" target="_blank"
-                           class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-green-600 hover:text-green-700 transition">
-                            <i class="fab fa-whatsapp text-sm"></i>
-                            Payment me dikkat aa rahi hai? Hamein WhatsApp karein
+                                                          <!-- District Support Agent Desk -->
+                    <div class="text-center mt-2 mb-1">
+                        <a href="https://wa.me/917847853652?text=Namaste%20Pinkkart%20District%20Support%20Desk,%20mujhe%20order%20aur%20payment%20me%20help%20chahiye." target="_blank"
+                           class="inline-flex items-center gap-2 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-full hover:bg-emerald-100 transition shadow-xs">
+                            <i class="fab fa-whatsapp text-sm text-emerald-600"></i>
+                            <span>Support: <strong>District Helpdesk Agent</strong> se chat karein</span>
                         </a>
                     </div>
 
@@ -2630,7 +2844,7 @@
 
         <!-- ===== GLOBAL FOOTER ===== -->
  <!-- NAYA UPDATED CODE -->
-    <footer class="mt-8 mb-14 px-4 py-6 border-t border-gray-200 text-center text-xs text-gray-500 bg-white rounded-t-2xl">
+    <footer class="mt-2 mb-14 px-4 py-6 border-t border-gray-200 text-center text-xs text-gray-500 bg-white rounded-t-2xl">
     <div class="flex items-center justify-center gap-1.5 mb-2">
                 <span class="w-5 h-5 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
                     <i class="fas fa-shopping-bag text-white" style="font-size:8px;"></i>
@@ -2849,7 +3063,8 @@
                         <p class="mt-1">Check the payment details and submit a new request if needed.</p>
                     </div>
 
-                    <div v-if="!vipSelectedPlanId" class="space-y-3">
+<div v-if="!vipSelectedPlanId && !(vipMembershipRequest && vipMembershipRequest.status === 'pending') && !isVipActive" class="space-y-3">
+
                         <p class="text-xs font-black text-gray-600 uppercase tracking-wide">Available Plans</p>
                         <p v-if="vipPlansError" class="rounded-xl bg-red-50 p-3 text-xs text-red-700">{{ vipPlansError }}</p>
                         <p v-else-if="!vipPlans.length" class="rounded-xl bg-gray-50 p-4 text-center text-xs text-gray-500">No VIP plans are available yet. Please check back later.</p>
@@ -2860,6 +3075,16 @@
                             </div>
                         </button>
                     </div>
+<div v-if="vipMembershipRequest && vipMembershipRequest.status === 'pending' && !vipSelectedPlanId" class="text-center py-4 space-y-3">
+    <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto text-xl">
+        <i class="fas fa-hourglass-half"></i>
+    </div>
+    <p class="text-xs font-bold text-gray-700">Aapki VIP payment verify ho rahi hai.</p>
+    <p class="text-[11px] text-gray-400">Admin approve karte hi aapki VIP membership chalu ho jayegi.</p>
+    <button @click="closeVipPlans()" class="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition">
+        Theek Hai (Close)
+    </button>
+</div>
 
                     <div v-else-if="selectedVipPlan" class="space-y-4">
                         <button @click="vipSelectedPlanId = ''" class="text-xs font-bold text-pink-600"><i class="fas fa-arrow-left mr-1"></i>Back to plans</button>
@@ -2933,7 +3158,7 @@
                 showLoginModal: false,
                 authSubMode: 'phone',
                 emailForm: { email: '', password: '' },
-                emailSignupForm: { name: '', mobile: '', email: '', password: '', confirmPassword: '', terms: false },
+                emailSignupForm: { name: '', mobile: '', email: '', password: '', confirmPassword: '', referralCode: '', terms: false },
                 emailAuthError: '',
                 emailAuthLoading: false,
                 showEmailPassword: false,
@@ -2949,6 +3174,7 @@
                 selectedCategory: 'All',
                 selectedPaymentMethod: 'COD',
                 useCashback: false,
+                useRewardPoints: false,
                 showPaymentVerifyModal: false,
                 utrId: '',
                 uploadedImageUrl: '',
@@ -2978,6 +3204,7 @@
                 cartItems: [],
                 wishlist: [],
                 orders: [],
+                allDeliveredOrders: [],
                 banners: [],
                 currentBannerIndex: 0,
                 bannerTimer: null,
@@ -3066,6 +3293,125 @@
                 ],
             },
             computed: {
+        currentMonthName() {
+            return new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+        },
+
+        // Is mahine ke delivered orders se Top Shoppers calculate karein
+                        // 1. Poore month ke sabhi shoppers rank-wise
+        allMonthlyShoppers() {
+            const orderList = this.allDeliveredOrders.length ? this.allDeliveredOrders : this.orders;
+            if (!orderList || !orderList.length) return [];
+            
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+
+            const userSpendMap = {};
+
+            orderList.forEach(o => {
+                if (o.status !== 'delivered' || !o.date) return;
+                
+                const orderDate = new Date(o.date);
+                if (isNaN(orderDate.getTime())) return;
+                
+                if (orderDate.getFullYear() === currentYear && orderDate.getMonth() === currentMonth) {
+                    const phone = String(o.customerPhone || '').replace(/\D/g, '');
+                    const uid = o.uid || phone || 'user';
+                    
+                    if (!userSpendMap[uid]) {
+                        const masked = phone.length >= 10 
+                            ? phone.slice(0, 4) + '****' + phone.slice(-2) 
+                            : 'User';
+
+                        userSpendMap[uid] = {
+                            uid,
+                            phone,
+                            name: (o.customerName || 'Shopper').split(' ')[0],
+                            maskedPhone: masked,
+                            totalSpent: 0
+                        };
+                    }
+                    userSpendMap[uid].totalSpent += Number(o.total || 0);
+                }
+            });
+
+            return Object.values(userSpendMap)
+                .sort((a, b) => b.totalSpent - a.totalSpent);
+        },
+
+        // 2. Leaderboard display ke liye Top 10
+        topShoppers() {
+            return this.allMonthlyShoppers.slice(0, 10);
+        },
+
+        // 3. Logged-in user ka apna rank aur target
+        myRankInfo() {
+            if (!this.loggedInUser) return null;
+            const myPhone = String(this.loggedInUser.phone || this.loggedInUser.mobile || '').replace(/\D/g, '');
+            const myUid = this.loggedInUser.uid;
+
+            const list = this.allMonthlyShoppers;
+            const idx = list.findIndex(s => (myUid && s.uid === myUid) || (myPhone && s.phone === myPhone));
+
+            if (idx === -1) {
+                return { rank: 'N/A', inTop3: false, totalSpent: 0 };
+            }
+
+            const rank = idx + 1;
+            const inTop3 = rank <= 3;
+            let gapToTop3 = 0;
+
+            if (!inTop3 && list[2]) {
+                gapToTop3 = Math.max(0, (list[2].totalSpent - list[idx].totalSpent) + 1);
+            }
+
+            return {
+                rank,
+                inTop3,
+                gapToTop3,
+                totalSpent: list[idx].totalSpent
+            };
+        },
+
+        myMonthlySpent() {
+            return this.myRankInfo ? this.myRankInfo.totalSpent : 0;
+        },
+rewardPointsApplied() {
+    // Sirf VIP members hi points redeem kar sakein
+    if (!this.useRewardPoints || !this.loggedInUser || !this.isVipActive) return 0;
+    
+    // User ke paas kitne points hain (1 Point = ₹1)
+    const availablePoints = Math.max(0, Number(this.loggedInUser.rewards) || 0);
+    
+    // Order bill ka maximum 2% points se pay ho sakta hai
+    const maxAllowedDiscount = this.cartTotal * 0.02;
+    
+    // Kitna deduct hoga
+    const discount = Math.min(availablePoints, maxAllowedDiscount);
+    return Math.round((discount + Number.EPSILON) * 100) / 100;
+},
+                currentMilestoneBought() {
+                    return Number((this.loggedInUser && this.loggedInUser.totalProductsBought) || 0);
+                },
+                nextMilestoneTarget() {
+                    const targets = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+                    const count = this.currentMilestoneBought;
+                    const next = targets.find(t => t > count);
+                    return next || 100;
+                },
+                                nextMilestoneReward() {
+    const rewardsMap = { 10: 5, 20: 5, 30: 10, 40: 10, 50: 15, 60: 15, 70: 20, 80: 20, 90: 25, 100: 25 };
+    return rewardsMap[this.nextMilestoneTarget] || 5;
+},
+                milestoneProgressPercent() {
+                    const count = this.currentMilestoneBought;
+                    const target = this.nextMilestoneTarget;
+                    const prevTarget = target === 10 ? 0 : target - 10;
+                    const diff = Math.max(0, count - prevTarget);
+                    return Math.min(100, Math.round((diff / 10) * 100));
+                },
+
                 // Latest non-delivered/non-rejected active order
                 activeOrder() {
                     if (!this.orders || !this.orders.length) return null;
@@ -3158,17 +3504,21 @@
                     if (!this.useCashback || !this.loggedInUser || this.cartTotal < 300) return 0;
                     const availableCashback = Math.max(0, Number(this.loggedInUser.cashback) || 0);
                     const maxUsable = Math.max(0, this.cartTotal - this.vipDiscountApplied + this.deliveryChargeApplied);
-                    const cashbackLimit = this.cartTotal * 0.10;
+                    const cashbackLimit = this.cartTotal * 0.03;
                     const amount = Math.min(availableCashback, maxUsable, cashbackLimit);
                     return Math.round((amount + Number.EPSILON) * 100) / 100;
                 },
 
                 
                       grandTotal() {
-                    const couponDisc = Number(this.couponDiscountApplied || 0);
-                    return Math.max(0, this.cartTotal - this.vipDiscountApplied + this.deliveryChargeApplied - this.cashbackApplied - couponDisc);
-                },
+    const couponDisc = Number(this.couponDiscountApplied || 0);
+    const cb = Number(this.cashbackApplied || 0);
+    const rp = Number(this.rewardPointsApplied || 0);
+    const vip = Number(this.vipDiscountApplied || 0);
+    const delivery = Number(this.deliveryChargeApplied || 0);
 
+    return Math.max(0, this.cartTotal - vip + delivery - cb - rp - couponDisc);
+},
                 userOrders() {
                     if (!this.loggedInUser) return [];
                     const u = this.loggedInUser;
@@ -3180,6 +3530,19 @@
                     }).reverse();
                 }
             },
+            watch: {
+                useCashback(val) {
+                    if (val) {
+                        this.useRewardPoints = false;
+                    }
+                },
+                useRewardPoints(val) {
+                    if (val) {
+                        this.useCashback = false;
+                    }
+                }
+            },
+
             methods: {
                 goToCategoryProducts(catName) {
                     this.activeTab = 'products';
@@ -3720,10 +4083,12 @@
                         this.vipPurchaseSubmitting = false;
                     }
                 },
-                async creditDeliveredCashback(order) {
+                                async creditDeliveredCashback(order) {
+                    return; // Double credit rokne ke liye customer side disable kiya gaya
                     try {
                         const authUid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
                         if (!order || !order.id || !authUid || order.uid !== authUid) return;
+
                         this._cbInFlight = this._cbInFlight || {};
                         this._cbFailed = this._cbFailed || {};
                         if (this._cbInFlight[order.id] || this._cbFailed[order.id]) return;
@@ -3755,6 +4120,85 @@
                         } finally { delete this._cbInFlight[order.id]; }
                     } catch (e) { console.error('Cashback credit failed:', e); }
                 },
+async updateMilestoneTask(order) {
+    try {
+        if (!order || order.status !== 'delivered' || !order.uid) return;
+        
+        // Delivered order me se total products count nikaalein
+        const itemsCount = (order.items || []).reduce((sum, it) => sum + Number(it.quantity || 1), 0);
+        if (itemsCount <= 0) return;
+
+        // Duplicate counting se bachne ke liye flag check
+        const flagRef = database.ref(`orders/${order.id}/milestoneCounted`);
+        const lock = await flagRef.transaction(c => c === true ? undefined : true);
+        if (!lock.committed) return;
+
+        const userRef = database.ref('users_email/' + order.uid);
+        const snap = await userRef.once('value');
+        if (!snap.exists()) return;
+
+        const user = snap.val();
+        const currentTotal = Number(user.totalProductsBought || 0) + itemsCount;
+        const completed = user.completedMilestones || {};
+        let bonusPoints = 0;
+
+              // Safe Milestone configuration (Kam points)
+        const levels = { 10: 5, 20: 5, 30: 10, 40: 10, 50: 15, 60: 15, 70: 20, 80: 20, 90: 25, 100: 25 };
+        for (let target in levels) {
+            if (currentTotal >= Number(target) && !completed[target]) {
+                bonusPoints += levels[target];
+                completed[target] = true;
+            }
+        }
+
+        // Database me progress aur reward points update karein
+        await userRef.update({
+            totalProductsBought: currentTotal,
+            completedMilestones: completed,
+            rewards: Number(user.rewards || 0) + bonusPoints
+        });
+
+        await database.ref(`orders/${order.id}`).update({ milestoneCounted: true });
+
+        if (bonusPoints > 0) {
+            this.showToast(`🎉 Milestone complete! +${bonusPoints} Reward Points mile!`, 'success');
+        }
+    } catch (err) {
+        console.error('Milestone update error:', err);
+    }
+},
+
+async creditDeliveredReferral(order) {
+    try {
+        if (!order || order.status !== 'delivered' || !order.uid) return;
+        const buyerRef = database.ref('users_email/' + order.uid);
+        const buyerSnap = await buyerRef.once('value');
+        if (!buyerSnap.exists()) return;
+
+        const buyerData = buyerSnap.val();
+
+        // Agar kisi ne refer kiya tha aur pehla reward nahi mila abhi tak
+        if (buyerData.referredBy && buyerData.referralRewarded === false) {
+            const referrerUid = buyerData.referredBy;
+            const rewardPoints = 10; // Refer karne wale ko 10 Points milenge
+
+            // Referrer ke account me points add karein
+            await database.ref(`users_email/${referrerUid}/rewards`).transaction(current => {
+                return (Number(current) || 0) + rewardPoints;
+            });
+
+            // Mark karein ki is user ka refer bonus diya ja chuka hai
+            await buyerRef.update({
+                referralRewarded: true,
+                referralRewardedAt: new Date().toISOString()
+            });
+
+            console.log('Referral points successfully credited to: ' + referrerUid);
+        }
+    } catch (err) {
+        console.error('Referral credit error:', err);
+    }
+},
                 startCashbackListener(phone, uid) {
                     if (this._cashbackRef) { try { this._cashbackRef.off(); } catch(e){} this._cashbackRef = null; }
                     const authenticatedUid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
@@ -3825,70 +4269,144 @@
                         database.ref(`users_email/${uid}/${key}`).set(value)
                     ));
                 },
-                async submitEmailLogin(){
-                    this.emailAuthError = '';
-                    const { email, password } = this.emailForm;
-                    if(!email || !password){ this.emailAuthError = 'Email aur Password dono required hain.'; return; }
-                    this.emailAuthLoading = true;
-                    try {
-                        const cred = await firebase.auth().signInWithEmailAndPassword(email, password);
-                        const uid = cred.user.uid;
-                        // Firebase DB se user profile lo
-                        const snap = await database.ref('users_email/' + uid).once('value');
-                        let userData = snap.val();
-                        if(!userData){
-                            userData = { name: cred.user.displayName || (cred.user.email || email).split('@')[0], phone: '', email: cred.user.email || email, uid, createdAt: new Date().toISOString() };
-                            await this.writeEmailProfile(uid, userData);
-                        } else if (!userData.uid) {
-                            await database.ref('users_email/' + uid + '/uid').set(uid);
-                            userData.uid = uid;
-                        }
-                        userData.uid = uid;
-                        this.loggedInUser = userData;
-                        localStorage.setItem('sw_user', JSON.stringify(userData));
-                        this.startCashbackListener(userData.phone, uid);
-                        this.startVipListeners(userData.phone, uid);
-                        this.showLoginModal = false;
-                        this.showToast('✅ Welcome back, ' + userData.name + '!', 'info');
-                        this.loadMyOrders();
-                        this._executePendingAction();
-                    } catch(e) {
-                        if(e.code === 'auth/user-not-found') this.emailAuthError = '❌ Yeh email registered nahi hai. Sign Up karein.';
-                        else if(e.code === 'auth/wrong-password') this.emailAuthError = '❌ Password galat hai. Dobara try karein.';
-                        else if(e.code === 'auth/invalid-email') this.emailAuthError = '❌ Email format sahi nahi hai.';
-                        else this.emailAuthError = e.message;
-                    } finally { this.emailAuthLoading = false; }
-                },
+              async submitEmailLogin(){
+    const { email, password } = this.emailForm;
+    if(!email || !password){ 
+        this.showToast('Email aur Password dono required hain.', 'error'); 
+        return; 
+    }
+    this.emailAuthLoading = true;
+    try {
+        const cred = await firebase.auth().signInWithEmailAndPassword(email, password);
+        const uid = cred.user.uid;
+        const snap = await database.ref('users_email/' + uid).once('value');
+        let userData = snap.val();
+        if(!userData){
+            userData = { name: cred.user.displayName || (cred.user.email || email).split('@')[0], phone: '', email: cred.user.email || email, uid, createdAt: new Date().toISOString() };
+            await this.writeEmailProfile(uid, userData);
+        } else if (!userData.uid) {
+            await database.ref('users_email/' + uid + '/uid').set(uid);
+            userData.uid = uid;
+        }
+        userData.uid = uid;
+        this.loggedInUser = userData;
+        localStorage.setItem('sw_user', JSON.stringify(userData));
+        this.startCashbackListener(userData.phone, uid);
+        this.startVipListeners(userData.phone, uid);
+        this.showLoginModal = false;
+        this.showToast('✅ Welcome back, ' + userData.name + '!', 'info');
+        this.loadMyOrders();
+        this._executePendingAction();
+    } catch(e) {
+        if(e.code === 'auth/user-not-found') {
+            this.showToast('❌ Yeh email registered nahi hai. Sign Up karein.', 'error');
+        } else if(e.code === 'auth/wrong-password') {
+            this.showToast('❌ Password galat hai. Dobara try karein.', 'error');
+        } else if(e.code === 'auth/invalid-email') {
+            this.showToast('❌ Email format sahi nahi hai.', 'error');
+        } else {
+            this.showToast(e.message, 'error');
+        }
+    } finally { 
+        this.emailAuthLoading = false; 
+    }
+},
                 async submitEmailSignUp(){
-                    this.emailAuthError = '';
-                    const { name, mobile, email, password, confirmPassword, terms } = this.emailSignupForm;
-                    if(!name.trim()){ this.emailAuthError = 'Pura naam likhein.'; return; }
-                    if(mobile && mobile.length !== 10){ this.emailAuthError = 'Mobile number 10 digits ka hona chahiye.'; return; }
-                    if(!email){ this.emailAuthError = 'Email address required hai.'; return; }
-                    if(!password || password.length < 6){ this.emailAuthError = 'Password kam se kam 6 characters ka hona chahiye.'; return; }
-                    if(confirmPassword && password !== confirmPassword){ this.emailAuthError = 'Dono passwords match nahi kar rahe.'; return; }
-                    if(!terms){ this.emailAuthError = 'Terms & Conditions agree karein.'; return; }
-                    this.emailAuthLoading = true;
-                    try {
-                        const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
-                        const uid = cred.user.uid;
-                        const userData = { name: name.trim(), email: cred.user.email || email, phone: mobile || '', uid, createdAt: new Date().toISOString() };
-                        await this.writeEmailProfile(uid, userData);
-                        this.loggedInUser = userData;
-                        localStorage.setItem('sw_user', JSON.stringify(userData));
-                        this.startCashbackListener(userData.phone, uid);
-                        this.startVipListeners(userData.phone, uid);
-                        this.showLoginModal = false;
-                        this.showToast('🎉 Account ban gaya! Welcome ' + name.trim(), 'info');
-                        this.loadMyOrders();
-                        this._executePendingAction();
-                    } catch(e) {
-                        if(e.code === 'auth/email-already-in-use') this.emailAuthError = '⚠️ Yeh email pehle se registered hai. Login karein.';
-                        else if(e.code === 'auth/invalid-email') this.emailAuthError = '❌ Email format sahi nahi hai.';
-                        else if(e.code === 'auth/weak-password') this.emailAuthError = '❌ Password aur strong banayein (6+ chars).';
-                        else this.emailAuthError = e.message;
-                    } finally { this.emailAuthLoading = false; }
-                },
+    const { name, mobile, email, password, confirmPassword, referralCode, terms } = this.emailSignupForm;
+    
+    if(!name.trim()){ 
+        this.showToast('Pura naam likhein.', 'error'); 
+        return; 
+    }
+    if(mobile && mobile.length !== 10){ 
+        this.showToast('Mobile number 10 digits ka hona chahiye.', 'error'); 
+        return; 
+    }
+    if(!email){ 
+        this.showToast('Email address required hai.', 'error'); 
+        return; 
+    }
+    if(!password || password.length < 6){ 
+        this.showToast('Password kam se kam 6 characters ka hona chahiye.', 'error'); 
+        return; 
+    }
+    if(confirmPassword && password !== confirmPassword){ 
+        this.showToast('Dono passwords match nahi kar rahe.', 'error'); 
+        return; 
+    }
+    if(!terms){ 
+        this.showToast('Terms & Conditions agree karein.', 'error'); 
+        return; 
+    }
+
+    // Khud ka number refer code me daalne se rokein
+    if(referralCode && referralCode.trim() === mobile.trim()){
+        this.showToast('Aap apna khud ka number referral me nahi daal sakte.', 'error');
+        return;
+    }
+
+    this.emailAuthLoading = true;
+    try {
+        let referrerUid = null;
+
+        // Referrer dhoondein (agar code daala hai)
+        if(referralCode && referralCode.trim()){
+            const refCode = referralCode.trim();
+            const snap = await database.ref('users_email').once('value');
+            if(snap.exists()){
+                const allUsers = snap.val();
+                for(let key in allUsers){
+                    if(allUsers[key].phone === refCode || key === refCode){
+                        referrerUid = key;
+                        break;
+                    }
+                }
+            }
+        }
+
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        const uid = cred.user.uid;
+                // Agar referral code valid hai toh naye user ko 10 welcome points milenge, warna 0
+        const welcomePoints = referrerUid ? 10 : 0;
+
+        const userData = { 
+            name: name.trim(), 
+            email: cred.user.email || email, 
+            phone: mobile || '', 
+            uid, 
+            referredBy: referrerUid || null,
+            referralRewarded: false,
+            rewards: welcomePoints,
+            cashback: 0,
+            createdAt: new Date().toISOString() 
+        };
+        await this.writeEmailProfile(uid, userData);
+        this.loggedInUser = userData;
+        localStorage.setItem('sw_user', JSON.stringify(userData));
+        this.startCashbackListener(userData.phone, uid);
+        this.startVipListeners(userData.phone, uid);
+        this.showLoginModal = false;
+              if (welcomePoints > 0) {
+            this.showToast('🎉 Welcome ' + name.trim() + '! Referral bonus +10 Reward Points mile!', 'success');
+        } else {
+            this.showToast('🎉 Account ban gaya! Welcome ' + name.trim(), 'info');
+        }
+        this.loadMyOrders();
+        this._executePendingAction();
+    } catch(e) {
+        if(e.code === 'auth/email-already-in-use') {
+            this.showToast('⚠️ Yeh email pehle se registered hai. Login karein.', 'error');
+        } else if(e.code === 'auth/invalid-email') {
+            this.showToast('❌ Email format sahi nahi hai.', 'error');
+        } else if(e.code === 'auth/weak-password') {
+            this.showToast('❌ Password aur strong banayein (6+ chars).', 'error');
+        } else {
+            this.showToast(e.message, 'error');
+        }
+    } finally { 
+        this.emailAuthLoading = false; 
+    }
+},
                 addToCart(product, fromDetail=false){
                     if(product.stockStatus && product.stockStatus !== 'In stock'){ this.showToast('Out of stock','error'); return; }
                     // If product has sizes and we're on detail page, require selection
@@ -3955,7 +4473,7 @@
                         event.target.value = '';
                     }
                 },
-                async confirmOnlineOrder() {
+                                async confirmOnlineOrder() {
                     const authUser = firebase.auth().currentUser;
                     if (!authUser || !this.loggedInUser || this.loggedInUser.uid !== authUser.uid) {
                         this.showLoginModal = true;
@@ -3969,7 +4487,7 @@
                     if (!this.uploadedImageUrl) { this.uploadError = 'Please upload payment receipt'; return; }
                     if (this.utrId.length < 6) { alert('Please enter a valid UTR ID'); return; }
                     const activeItems = this.isBuyNowMode && this.buyNowItem ? this.buyNowItem : this.cartItems;
-                                        const orderItems = activeItems.map(it => {
+                    const orderItems = activeItems.map(it => {
                         const originalProd = this.products.find(p => p.id === it.id);
                         const itemCashback = Number((originalProd && originalProd.cashback) || it.cashback || 0);
                         return {
@@ -3985,8 +4503,9 @@
                         };
                     });
                     const totalCashbackEarnable = orderItems.reduce((sum, it) => sum + (Number(it.cashback || 0) * Number(it.quantity || 1)), 0);
-const usedCashback = Number(this.cashbackApplied || 0);
-  const newOrder = {
+                    const usedCashback = Number(this.cashbackApplied || 0);
+                    const usedPoints = Number(this.rewardPointsApplied || 0);
+                    const newOrder = {
                         customerName: this.checkoutForm.name.trim(),
                         customerPhone: this.checkoutForm.phone.trim(),
                         customerAddress: this.checkoutForm.address.trim(),
@@ -4001,7 +4520,8 @@ const usedCashback = Number(this.cashbackApplied || 0);
                         vipPlanName: this.isVipActive ? this.vipMembership.planName : '',
                         deliveryCharge: this.deliveryChargeApplied,
                         cashbackUsed: usedCashback,
-                       totalCashbackEarnable: totalCashbackEarnable,
+                        rewardPointsUsed: usedPoints,
+                        totalCashbackEarnable: totalCashbackEarnable,
                         cashbackCredited: false,
                         total: this.grandTotal,
                         status: 'pending',
@@ -4014,12 +4534,12 @@ const usedCashback = Number(this.cashbackApplied || 0);
                     try {
                         await database.ref('orders').push(newOrder);
 
-if (this.appliedCoupon && authUser && authUser.uid) {
-    await database.ref(`users_email/${authUser.uid}/usedCoupons/${this.appliedCoupon.code}`).set(true);
-}
-this.appliedCoupon = null;
-this.couponDiscountApplied = 0;
-                        
+                        if (this.appliedCoupon && authUser && authUser.uid) {
+                            await database.ref(`users_email/${authUser.uid}/usedCoupons/${this.appliedCoupon.code}`).set(true);
+                        }
+                        this.appliedCoupon = null;
+                        this.couponDiscountApplied = 0;
+                     
                         if (usedCashback > 0) {
                             const cashbackRef = database.ref(`users_email/${authUser.uid}/cashback`);
                             const cashbackResult = await cashbackRef.transaction(currentCashback =>
@@ -4028,8 +4548,18 @@ this.couponDiscountApplied = 0;
                             this.loggedInUser.cashback = Number(cashbackResult.snapshot.val() || 0);
                             localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
                         }
+
+                        if (usedPoints > 0) {
+                            const rewardsRef = database.ref(`users_email/${authUser.uid}/rewards`);
+                            const result = await rewardsRef.transaction(current =>
+                                Math.max(0, Number(current || 0) - usedPoints)
+                            );
+                            this.loggedInUser.rewards = Number(result.snapshot.val() || 0);
+                            localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
+                        }
+
                         if(!this.isBuyNowMode){ this.cartItems = []; localStorage.removeItem('sw_cart'); this.syncCartToCloud(); }
-                        this.buyNowItem=null; this.isBuyNowMode=false; this.useCashback=false;
+                        this.buyNowItem=null; this.isBuyNowMode=false; this.useCashback=false; this.useRewardPoints=false;
                         this.showPaymentVerifyModal = false; this.selectedProduct = null;
                         this.utrId = ''; this.uploadedImageUrl = '';
                         this.showOrderSuccess = true;
@@ -4044,25 +4574,62 @@ this.couponDiscountApplied = 0;
                         this.showToast('Please sign in with your email account to place an order.', 'error');
                         return;
                     }
-                    if(!this.checkoutForm.name.trim()||!this.checkoutForm.phone.trim()||this.checkoutForm.phone.length<10||!this.checkoutForm.address.trim()){ alert('All fields required'); return; }
-                    const activeItems =this.isBuyNowMode ? this.buyNowItem : this.cartItems;
-                    const orderItems = activeItems.map(it=>({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), weight: it.weight || '', cashback:Number(((this.products.find(p=>p.id===it.id)||{}).cashback) || it.cashback || 0), shopkeeperName:it.shopkeeperName||it.shopkeeper||'', shopkeeper:it.shopkeeperName||it.shopkeeper||'', shopkeeperId:it.shopkeeperId||'' }));
+                    if(!this.checkoutForm.name.trim()||!this.checkoutForm.phone.trim()||this.checkoutForm.phone.length<10||!this.checkoutForm.address.trim()){ 
+                        alert('All fields required'); 
+                        return; 
+                    }
+                    const activeItems = this.isBuyNowMode ? this.buyNowItem : this.cartItems;
+                    const orderItems = activeItems.map(it=>({ 
+                        id: it.id, 
+                        name: it.name, 
+                        quantity: it.quantity, 
+                        price: Number(it.price), 
+                        weight: it.weight || '', 
+                        cashback: Number(((this.products.find(p=>p.id===it.id)||{}).cashback) || it.cashback || 0), 
+                        shopkeeperName: it.shopkeeperName||it.shopkeeper||'', 
+                        shopkeeper: it.shopkeeperName||it.shopkeeper||'', 
+                        shopkeeperId: it.shopkeeperId||'' 
+                    }));
                     const totalCashbackEarnable = orderItems.reduce((sum, it) => sum + (Number(it.cashback || 0) * Number(it.quantity || 1)), 0);
                     const usedCashback = Number(this.cashbackApplied || 0);
-                    const newOrder = { customerName:this.checkoutForm.name.trim(), customerPhone:this.checkoutForm.phone.trim(), customerAddress:this.checkoutForm.address.trim(), userEmail:authUser.email||'', customerEmail:authUser.email||'', uid:authUser.uid, items:orderItems, itemTotal:this.cartTotal, vipDiscount:this.vipDiscountApplied, isVipOrder:this.isVipActive, vipPlanId:this.isVipActive?this.vipMembership.planId:'', vipPlanName:this.isVipActive?this.vipMembership.planName:'', deliveryCharge:this.deliveryChargeApplied, cashbackUsed:usedCashback,
-                         couponCode: this.appliedCoupon ? this.appliedCoupon.code : '',
+                    const usedPoints = Number(this.rewardPointsApplied || 0);
+                    const newOrder = { 
+                        customerName: this.checkoutForm.name.trim(), 
+                        customerPhone: this.checkoutForm.phone.trim(), 
+                        customerAddress: this.checkoutForm.address.trim(), 
+                        userEmail: authUser.email||'', 
+                        customerEmail: authUser.email||'', 
+                        uid: authUser.uid, 
+                        items: orderItems, 
+                        itemTotal: this.cartTotal, 
+                        vipDiscount: this.vipDiscountApplied, 
+                        isVipOrder: this.isVipActive, 
+                        vipPlanId: this.isVipActive ? this.vipMembership.planId : '', 
+                        vipPlanName: this.isVipActive ? this.vipMembership.planName : '', 
+                        deliveryCharge: this.deliveryChargeApplied, 
+                        cashbackUsed: usedCashback,
+                        rewardPointsUsed: usedPoints,
+                        couponCode: this.appliedCoupon ? this.appliedCoupon.code : '',
                         couponDiscount: Number(this.couponDiscountApplied || 0),
-totalCashbackEarnable:totalCashbackEarnable, cashbackCredited:false, total:this.grandTotal, status:'pending', paymentMethod:'COD', payment_method:'COD', date:new Date().toISOString() };
-                    try{
-                        // Order save karo aur coupon use record karo
+                        totalCashbackEarnable: totalCashbackEarnable, 
+                        cashbackCredited: false, 
+                        total: this.grandTotal, 
+                        status: 'pending', 
+                        paymentMethod: 'COD', 
+                        payment_method: 'COD', 
+                        date: new Date().toISOString() 
+                    };
+
+                    try {
                         await database.ref('orders').push(newOrder);
+
                         if (this.appliedCoupon && authUser && authUser.uid) {
                             await database.ref(`users_email/${authUser.uid}/usedCoupons/${this.appliedCoupon.code}`).set(true);
                         }
                         this.appliedCoupon = null;
                         this.couponDiscountApplied = 0;
 
-                            if (usedCashback > 0) {
+                        if (usedCashback > 0) {
                             const cashbackRef = database.ref(`users_email/${authUser.uid}/cashback`);
                             const cashbackResult = await cashbackRef.transaction(currentCashback =>
                                 Math.max(0, Number(currentCashback || 0) - usedCashback)
@@ -4070,12 +4637,35 @@ totalCashbackEarnable:totalCashbackEarnable, cashbackCredited:false, total:this.
                             this.loggedInUser.cashback = Number(cashbackResult.snapshot.val() || 0);
                             localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
                         }
-                        // Sirf normal cart ko clear karo, buyNow mode mein cart safe rahe
-                        if(!this.isBuyNowMode){ this.cartItems=[]; localStorage.removeItem('sw_cart'); this.syncCartToCloud(); }
-                        this.buyNowItem=null; this.isBuyNowMode=false; this.useCashback=false;
-                        this.showCheckoutModal=false; this.selectedProduct=null; this.showOrderSuccess=true; this.showToast('Order placed!','order'); this.loadMyOrders();
-                    }catch(e){ alert(e.message); }
+
+                        if (usedPoints > 0) {
+                            const rewardsRef = database.ref(`users_email/${authUser.uid}/rewards`);
+                            const result = await rewardsRef.transaction(current =>
+                                Math.max(0, Number(current || 0) - usedPoints)
+                            );
+                            this.loggedInUser.rewards = Number(result.snapshot.val() || 0);
+                            localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
+                        }
+
+                        if(!this.isBuyNowMode){ 
+                            this.cartItems = []; 
+                            localStorage.removeItem('sw_cart'); 
+                            this.syncCartToCloud(); 
+                        }
+                        this.buyNowItem = null; 
+                        this.isBuyNowMode = false; 
+                        this.useCashback = false; 
+                        this.useRewardPoints = false;
+                        this.showCheckoutModal = false; 
+                        this.selectedProduct = null; 
+                        this.showOrderSuccess = true; 
+                        this.showToast('Order placed!', 'order'); 
+                        this.loadMyOrders();
+                    } catch(e) { 
+                        alert(e.message); 
+                    }
                 },
+
                 // 1. Coupon Code Apply Logic
                 async applyCouponCode() {
                     const code = (this.couponInput || '').trim().toUpperCase();
@@ -4412,7 +5002,14 @@ totalCashbackEarnable:totalCashbackEarnable, cashbackCredited:false, total:this.
                                 this.previousOrderStatuses[order.id]=order.status;
                             });
                             this.orders=updatedOrders;
-                            updatedOrders.forEach(o => { if (o.status === 'delivered' && o.cashbackCredited === false) this.creditDeliveredCashback(o); });
+                                                        updatedOrders.forEach(o => { 
+    if (o.status === 'delivered') {
+        // Cashback Rider Panel se credit hota hai
+        this.creditDeliveredReferral(o);
+        this.updateMilestoneTask(o);
+    }
+});
+
                         } else {
                             this.orders=[];
                             this.previousOrderStatuses={};
@@ -4569,6 +5166,38 @@ totalCashbackEarnable:totalCashbackEarnable, cashbackCredited:false, total:this.
                     if(c.includes('book')) return 'fas fa-book';
                     if(c === 'all') return 'fas fa-th-large';
                     return 'fas fa-tag';
+                },
+                shareReferralLink() {
+                    if (!this.loggedInUser) {
+                        this.showToast('Pehle login karein!', 'warn');
+                        return;
+                    }
+                    const code = this.loggedInUser.phone || this.loggedInUser.uid;
+                    const text = `Pinkkart se fresh groceries aur samaan order karein! Sign up karte waqt mera refer code *${code}* use karein: https://pinkkart-shop.vercel.app`;
+                    
+                    if (navigator.share) {
+                        navigator.share({ 
+                            title: 'Pinkkart Refer & Earn', 
+                            text: text 
+                        }).catch(() => {});
+                    } else {
+                        // Agar browser direct share support na kare toh clipboard me copy ho jayega
+                        navigator.clipboard.writeText(text);
+                        this.showToast('Referral link aur code copy ho gaya!', 'info');
+                    }
+                },
+
+                loadLeaderboardOrders() {
+                    database.ref('orders').on('value', snap => {
+                        const data = snap.val();
+                        if (data) {
+                            this.allDeliveredOrders = Object.keys(data)
+                                .map(k => ({ id: k, ...data[k] }))
+                                .filter(o => o.status === 'delivered');
+                        } else {
+                            this.allDeliveredOrders = [];
+                        }
+                    });
                 }
             },
             mounted() {
@@ -4591,7 +5220,8 @@ if (cachedUser) {
                 if(localStorage.getItem('pk_theme') === 'dark'){ this.isDark = true; document.body.classList.add('dark-mode'); }
                 this.startVipPlanListener();
                 this._vipClockTimer = window.setInterval(() => { this.membershipNow = Date.now(); }, 60000);
-                this.loadProducts(); this.loadMyOrders(); this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.startSlider();
+                this.loadProducts(); this.loadMyOrders(); this.loadLeaderboardOrders();
+this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.startSlider();
 
                 // --- SPLASH SCREEN AUTO HIDE ---
                 setTimeout(() => {
