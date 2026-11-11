@@ -1997,47 +1997,64 @@
     </div>
 </div>
 
-                <!-- ===== RECENT CASHBACK & REWARDS USED HISTORY ===== -->
-                <div v-if="userOrders.some(o => Number(o.cashbackUsed) > 0 || Number(o.rewardPointsUsed) > 0)"
-                     class="bg-white rounded-3xl border border-gray-100 p-4 shadow-xs">
-                    
-                    <div class="flex items-center justify-between mb-2.5 pb-2 border-b border-gray-50">
-                        <div class="flex items-center gap-2">
-                            <span class="w-6 h-6 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center text-[10px]">
-                                <i class="fas fa-receipt"></i>
-                            </span>
-                            <p class="text-xs font-black text-gray-800 tracking-wide">Wallet & Points History</p>
-                        </div>
-                        <span class="text-[9px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">Order Deductions</span>
-                    </div>
+          <!-- ===== RECENT CASHBACK, REWARDS & REFERRAL HISTORY ===== -->
+<div v-if="(userOrders && userOrders.some(o => Number(o.cashbackUsed) > 0 || Number(o.rewardPointsUsed) > 0)) || (userRewardHistory && userRewardHistory.length > 0)"
+     class="bg-white rounded-3xl border border-gray-100 p-4 shadow-xs">
+    
+    <div class="flex items-center justify-between mb-2.5 pb-2 border-b border-gray-50">
+        <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center text-[10px]">
+                <i class="fas fa-receipt"></i>
+            </span>
+            <p class="text-xs font-black text-gray-800 tracking-wide">Wallet & Points History</p>
+        </div>
+        <span class="text-[9px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">Deductions & Referrals</span>
+    </div>
 
-                    <div class="space-y-2 overflow-y-auto no-scrollbar" style="max-height: 180px;">
-                        <div v-for="o in userOrders.filter(o => Number(o.cashbackUsed) > 0 || Number(o.rewardPointsUsed) > 0).slice().sort((a,b)=>new Date(b.date)-new Date(a.date))" 
-                             :key="o.id"
-                             class="flex items-center justify-between bg-gray-50/80 rounded-2xl px-3 py-2 border border-gray-100/80">
-                            <div>
-                                <p class="text-gray-800 text-[11px] font-black tracking-wide font-mono">#{{ o.id.slice(-6).toUpperCase() }}</p>
-                                <p class="text-gray-400 text-[9px] font-medium mt-0.5">{{ o.date ? new Date(o.date).toLocaleDateString('en-IN') : '' }}</p>
-                            </div>
-                            
-                            <div class="flex items-center gap-1.5 flex-wrap justify-end">
-                                <!-- Cashback Used Badge -->
-                                <span v-if="Number(o.cashbackUsed) > 0" 
-                                      class="inline-flex items-center gap-1 text-emerald-700 font-black text-[10px] bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full">
-                                    <i class="fas fa-wallet text-[9px] text-emerald-600"></i>
-                                    -₹{{ Number(o.cashbackUsed).toFixed(2) }}
-                                </span>
-                                
-                                <!-- Reward Points Used Badge -->
-                                <span v-if="Number(o.rewardPointsUsed) > 0" 
-                                      class="inline-flex items-center gap-1 text-purple-700 font-black text-[10px] bg-purple-50 border border-purple-200/60 px-2 py-0.5 rounded-full">
-                                    <i class="fas fa-star text-[9px] text-purple-600"></i>
-                                    -{{ Number(o.rewardPointsUsed).toFixed(0) }} Pts
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+    <div class="space-y-2 overflow-y-auto no-scrollbar" style="max-height: 180px;">
+        
+        <!-- Referral Bonus History Items -->
+        <div v-for="history in userRewardHistory" :key="history.id" class="flex items-center justify-between bg-purple-50/50 rounded-2xl px-3 py-2 border border-purple-100">
+            <div class="flex items-center gap-2">
+                <span class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-[10px]">
+                    <i class="fas fa-user-plus"></i>
+                </span>
+                <div>
+                    <p class="text-gray-800 text-[11px] font-black">{{ history.title }}</p>
+                    <p class="text-gray-400 text-[9px] font-medium">{{ formatDate(history.timestamp) }}</p>
                 </div>
+            </div>
+            <span class="text-purple-700 font-black text-[10px] bg-purple-100 border border-purple-200 px-2 py-0.5 rounded-full">
+                +{{ history.points }} Pts
+            </span>
+        </div>
+
+        <!-- Order Deductions Items -->
+        <div v-for="o in userOrders.filter(o => Number(o.cashbackUsed) > 0 || Number(o.rewardPointsUsed) > 0).slice().sort((a,b)=>new Date(b.date)-new Date(a.date))" 
+             :key="o.id"
+             class="flex items-center justify-between bg-gray-50/80 rounded-2xl px-3 py-2 border border-gray-100/80">
+            <div>
+                <p class="text-gray-800 text-[11px] font-black tracking-wide font-mono">#{{ o.id.slice(-6).toUpperCase() }}</p>
+                <p class="text-gray-400 text-[9px] font-medium mt-0.5">{{ o.date ? new Date(o.date).toLocaleDateString('en-IN') : '' }}</p>
+            </div>
+            
+            <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                <span v-if="Number(o.cashbackUsed) > 0" 
+                      class="inline-flex items-center gap-1 text-emerald-700 font-black text-[10px] bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full">
+                    <i class="fas fa-wallet text-[9px] text-emerald-600"></i>
+                    -₹{{ Number(o.cashbackUsed).toFixed(2) }}
+                </span>
+                
+                <span v-if="Number(o.rewardPointsUsed) > 0" 
+                      class="inline-flex items-center gap-1 text-purple-700 font-black text-[10px] bg-purple-50 border border-purple-200/60 px-2 py-0.5 rounded-full">
+                    <i class="fas fa-star text-[9px] text-purple-600"></i>
+                    -{{ Number(o.rewardPointsUsed).toFixed(0) }} Pts
+                </span>
+            </div>
+        </div>
+
+    </div>
+</div>
 
                 <!-- 9. Quick Actions & Navigation List (Clean Studio Style) -->
                 <div class="bg-white rounded-3xl border border-gray-100 shadow-xs divide-y divide-gray-50 overflow-hidden">
@@ -2210,7 +2227,13 @@
         <div v-if="showFullScreenImage && selectedProduct" class="fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center touch-none" @click="showFullScreenImage = false"><button class="absolute top-6 right-6 text-white text-2xl z-[10000] bg-white/20 w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/40 backdrop-blur-sm transition" @click="showFullScreenImage = false"><i class="fas fa-times"></i></button><img :src="getProductSliderImages()[currentProductImageIndex]" class="max-w-[95%] max-h-[90vh] object-contain pointer-events-auto" @click.stop alt="Full Screen Product"><button v-if="getProductSliderImages().length > 1" @click.stop="prevProductImage" class="absolute left-4 top-1/2 -translate-y-1/2 text-white text-xl w-10 h-10 flex items-center justify-center bg-white/20 hover:bg-white/40 rounded-full backdrop-blur-sm"><i class="fas fa-chevron-left"></i></button><button v-if="getProductSliderImages().length > 1" @click.stop="nextProductImage" class="absolute right-4 top-1/2 -translate-y-1/2 text-white text-xl w-10 h-10 flex items-center justify-center bg-white/20 hover:bg-white/40 rounded-full backdrop-blur-sm"><i class="fas fa-chevron-right"></i></button></div>
 
         <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-2 px-2 flex justify-around items-center z-40 shadow-lg max-w-4xl mx-auto rounded-t-2xl">
-            <button @click="activeTab='products'; selectedProduct=null;" :class="activeTab==='products' ? 'text-blue-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-0.5 flex-1"><i class="fas fa-th-large text-xl"></i><span class="text-[10px]">Product</span></button>
+        <!-- Home Navigation Button (Auto Scroll to Top) -->
+<button @click="activeTab='products'; selectedProduct=null; window.scrollTo({top: 0, behavior: 'smooth'});" 
+        :class="activeTab==='products' ? 'text-blue-600 font-bold' : 'text-gray-400'" 
+        class="flex flex-col items-center gap-0.5 flex-1">
+    <i class="fas fa-home text-xl"></i>
+    <span class="text-[10px]">Home</span>
+</button>
             <button @click="if(activeTab!=='wishlist'){activeTab='wishlist'; history.pushState({page:'tab'}, '');}" :class="activeTab==='wishlist' ? 'text-blue-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-0.5 relative flex-1"><i class="fas fa-heart text-xl"></i><span class="text-[10px]">Wishlist</span><span v-if="wishlist.length" class="absolute -top-1 right-3 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{{ wishlist.length }}</span></button>
             <button @click="openVipPlans()" :class="showVipPlansModal ? 'text-amber-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-0.5 flex-1"><i class="fas fa-crown text-xl text-amber-500"></i><span class="text-[10px]">VIP</span></button>
             <!-- Categories - center prominent -->
@@ -2220,7 +2243,13 @@
                 </div>
                 <span class="text-[10px]">Categories</span>
             </button>
-            <button @click="if(activeTab!=='orders'){activeTab='orders'; history.pushState({page:'tab'}, '');}" :class="activeTab==='orders' ? 'text-blue-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-0.5 flex-1"><i class="fas fa-box text-xl"></i><span class="text-[10px]">Order</span></button>
+        <button 
+  @click="if(activeTab!=='orders'){activeTab='orders'; history.pushState({page:'tab'}, ''); window.scrollTo({top: 0, behavior: 'smooth'});}" 
+  :class="activeTab==='orders' ? 'text-blue-600 font-bold' : 'text-gray-400'" 
+  class="flex flex-col items-center gap-0.5 flex-1">
+  <i class="fas fa-box text-xl"></i>
+  <span class="text-[10px]">Order</span>
+</button>
             <button @click="if(activeTab!=='profile'){activeTab='profile'; fetchProfile(); history.pushState({page:'tab'}, '');}" :class="activeTab==='profile' ? 'text-pink-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-0.5 relative flex-1">
                 <i class="fas fa-user-circle text-xl"></i><span class="text-[10px]">Profile</span>
                 <span v-if="loggedInUser" class="absolute top-0 right-3 w-2 h-2 bg-green-500 rounded-full border border-white"></span>
@@ -3225,6 +3254,7 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
         new Vue({
             el: '#app',
             data: {
+               userRewardHistory: [],
                activeMilestoneModal: null,
                dynamicMilestones: {},
                 isClaimingGift: false,
@@ -4358,29 +4388,49 @@ async updateMilestoneTask(order) {
 async creditDeliveredReferral(order) {
     try {
         if (!order || order.status !== 'delivered' || !order.uid) return;
+        
+        // 1. Sabse pehle order node par hi atomic lock lagayein taaki double run na ho
+        const orderRef = database.ref(`orders/${order.id}/referralProcessed`);
+        const lock = await orderRef.transaction(current => {
+            if (current === true) return; // Agar pehle se true hai toh rok do
+            return true;
+        });
+
+        // Agar lock commit nahi hua, matlab yeh function is order ke liye pehle hi chal chuka hai
+        if (!lock.committed) return;
+
         const buyerRef = database.ref('users_email/' + order.uid);
         const buyerSnap = await buyerRef.once('value');
         if (!buyerSnap.exists()) return;
-
+        
         const buyerData = buyerSnap.val();
-
-        // Agar kisi ne refer kiya tha aur pehla reward nahi mila abhi tak
+        
+        // Agar kisi ne refer kiya tha aur abhi tak reward nahi mila
         if (buyerData.referredBy && buyerData.referralRewarded === false) {
             const referrerUid = buyerData.referredBy;
             const rewardPoints = 10; // Refer karne wale ko 10 Points milenge
-
+            
             // Referrer ke account me points add karein
             await database.ref(`users_email/${referrerUid}/rewards`).transaction(current => {
                 return (Number(current) || 0) + rewardPoints;
             });
 
+            // Referrer ke liye Reward History me entry push karein
+            const referralLog = {
+                type: 'referral_bonus',
+                title: 'Referral Bonus (Dost ka pehla order)',
+                points: 10,
+                timestamp: new Date().toISOString()
+            };
+            await database.ref(`reward_history/${referrerUid}`).push(referralLog);
+            
             // Mark karein ki is user ka refer bonus diya ja chuka hai
             await buyerRef.update({
                 referralRewarded: true,
                 referralRewardedAt: new Date().toISOString()
             });
-
-            console.log('Referral points successfully credited to: ' + referrerUid);
+            
+            console.log('Referral points successfully credited once to: ' + referrerUid);
         }
     } catch (err) {
         console.error('Referral credit error:', err);
@@ -5417,14 +5467,27 @@ async creditDeliveredReferral(order) {
                     });
                 }
             },
-            mounted() {
-                // Never trust a browser-stored profile as proof of sign-in.
-                let cachedUser = localStorage.getItem('sw_user');
-if (cachedUser) {
-    try {
-        this.loggedInUser = JSON.parse(cachedUser);
-    } catch(e) {}
-}
+
+ mounted() {
+    // 1. Reward history load karne ka safe listener
+    this.$watch('loggedInUser', (newUser) => {
+        if (newUser && newUser.uid) {
+            database.ref(`reward_history/${newUser.uid}`).on('value', snap => {
+                const data = snap.val() || {};
+                this.userRewardHistory = Object.keys(data).map(key => ({ id: key, ...data[key] })).reverse();
+            });
+        } else {
+            this.userRewardHistory = [];
+        }
+    }, { immediate: true });
+
+    // 2. User session check
+    let cachedUser = localStorage.getItem('sw_user');
+    if (cachedUser) {
+        try {
+            this.loggedInUser = JSON.parse(cachedUser);
+        } catch(e) {}
+    }
                 this.vipMembership = null;
                 this.vipMembershipRequest = null;
                 let logo = localStorage.getItem('pk_shop_logo'); if(logo) this.shopLogoUrl = logo;
