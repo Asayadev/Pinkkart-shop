@@ -1950,20 +1950,21 @@
          <!-- ===== GAMING MILESTONE ROADMAP (DYNAMIC SCROLL ROAD) ===== -->
 <div class="bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-4 shadow-xl border border-indigo-500/30 text-white relative overflow-hidden">
     
-    <!-- Top Header -->
-    <div class="flex items-center justify-between pb-3 border-b border-indigo-800/60 mb-3">
-        <div class="flex items-center gap-2">
-            <span class="w-8 h-8 rounded-xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center text-sm shadow-md">
+       <!-- Top Header Improved -->
+    <div class="flex items-start justify-between gap-2 pb-3 border-b border-indigo-800/60 mb-3">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <span class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center text-sm shadow-md flex-shrink-0">
                 🎁
             </span>
-            <div>
-                <p class="text-xs font-black uppercase tracking-wider text-pink-300">Milestone Treasure Road</p>
-                <p class="text-[10px] text-gray-300 font-semibold">Orders karein aur real gifts unlock karein!</p>
+            <div class="min-w-0">
+                <p class="text-xs font-black uppercase tracking-wider text-pink-300 truncate">Milestone Treasure Road</p>
+                <p class="text-[10px] text-gray-300 font-medium truncate">Orders karein aur real gifts unlock karein!</p>
             </div>
         </div>
-        <span class="text-[10px] font-black bg-indigo-500/40 text-indigo-200 border border-indigo-400/30 px-2.5 py-1 rounded-full">
-            Bought: {{ currentMilestoneBought }} Items
-        </span>
+        <div class="flex-shrink-0 bg-indigo-900/80 border border-indigo-400/40 text-amber-300 px-3 py-1 rounded-xl text-center shadow-inner">
+            <p class="text-[9px] uppercase tracking-wider opacity-75 font-bold">Progress</p>
+            <p class="text-xs font-black">{{ currentMilestoneBought }} Items</p>
+        </div>
     </div>
 
     <!-- Horizontal Scroll Road for All Dynamic Levels (10, 25, 60...) -->
@@ -1971,9 +1972,9 @@
         <div v-for="lvl in activeMilestoneLevels" :key="lvl" 
              class="flex-shrink-0 w-24 flex flex-col items-center">
             
-            <div @click="openMilestoneReward(lvl)"
-                 class="w-full bg-slate-800/90 border-2 rounded-2xl p-2.5 flex items-center justify-around cursor-pointer transition active:scale-95 shadow-md"
-                 :class="currentMilestoneBought >= lvl ? (isMilestoneClaimed(lvl) ? 'border-emerald-500 bg-emerald-950/40' : 'border-amber-400 bg-amber-950/45 animate-bounce') : 'border-slate-700 opacity-60'">
+                       <div @click="openMilestoneReward(lvl)"
+                 class="w-full bg-slate-800/90 border-2 rounded-2xl p-2.5 pt-3 flex items-center justify-around cursor-pointer transition active:scale-95 shadow-md overflow-hidden"
+                 :class="currentMilestoneBought >= lvl ? (isMilestoneClaimed(lvl) ? 'border-emerald-500 bg-emerald-950/40' : 'border-amber-400 bg-amber-950/45 animate-pulse') : 'border-slate-700 opacity-60'">
                 <div class="flex flex-col items-center">
                     <span class="text-xs">⭐</span>
                     <span class="text-[8px] font-black text-amber-300">+{{ getMilestonePoints(lvl) }} Pts</span>
