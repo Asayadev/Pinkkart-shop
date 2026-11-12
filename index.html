@@ -4,7 +4,45 @@
     <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Pinkkart | User Panel - Pinkkart</title>
-    <script>
+        <script>
+        // --- OFFLINE DETECTION & SCREEN CODE ---
+        window.addEventListener('online', function() {
+            window.location.reload();
+        });
+
+        window.addEventListener('offline', function() {
+            showOfflineScreen();
+        });
+
+        function showOfflineScreen() {
+            if (document.getElementById('pkOfflineScreen')) return;
+            const offlineDiv = document.createElement('div');
+            offlineDiv.id = 'pkOfflineScreen';
+            offlineDiv.style.cssText = 'position:fixed;inset:0;z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0f111a;color:white;font-family:sans-serif;text-align:center;padding:20px;';
+            offlineDiv.innerHTML = `
+                <div style="font-size:55px; margin-bottom:15px;">📡</div>
+                <h2 style="font-size:20px; font-weight:800; margin-bottom:8px;">Internet Connection Nahi Hai</h2>
+                <p style="font-size:12px; color:#94a3b8; margin-bottom:20px;">Kripya apna mobile data ya Wi-Fi check karein.</p>
+                <button onclick="window.location.reload()" style="background:#ec4899; color:white; border:none; padding:12px 28px; border-radius:14px; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 4px 15px rgba(236,72,153,0.4);">
+                    🔄 Dobara Try Karein (Retry)
+                </button>
+            `;
+            if (document.body) {
+                document.body.appendChild(offlineDiv);
+            } else {
+                document.addEventListener('DOMContentLoaded', () => document.body.appendChild(offlineDiv));
+            }
+        }
+
+        if (!navigator.onLine) {
+            if (document.body) {
+                showOfflineScreen();
+            } else {
+                document.addEventListener('DOMContentLoaded', showOfflineScreen);
+            }
+        }
+        // ---------------------------------------
+
         (function () {
             window.__pkFailedAssets = [];
             var bannerShown = false;
