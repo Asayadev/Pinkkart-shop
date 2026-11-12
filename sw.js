@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pinkkart-v1';
+const CACHE_NAME = 'pinkkart-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/pinkkart search.html' // Yahan apni HTML file ka exact naam likho
