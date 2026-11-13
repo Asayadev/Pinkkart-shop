@@ -7,19 +7,19 @@
   "theme_color": "#ec4899",
   "icons": [
     {
-      "src": "https://res.cloudinary.com/j2dkr5jj/image/upload/w_192,h_192,c_pad,w_130,f_png/v1/lxjxhmz13hf8rlbo3nto.png",
+      "src": "https://res.cloudinary.com/j2dkr5jj/image/upload/w_192,h_192,c_pad,b_rgb:ec4899,f_png/v1/lxjxhmz13hf8rlbo3nto.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://res.cloudinary.com/j2dkr5jj/image/upload/w_512,h_512,c_pad,w_350,f_png/v1/lxjxhmz13hf8rlbo3nto.png",
+      "src": "https://res.cloudinary.com/j2dkr5jj/image/upload/w_512,h_512,c_pad,b_rgb:ec4899,f_png/v1/lxjxhmz13hf8rlbo3nto.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://res.cloudinary.com/j2dkr5jj/image/upload/w_512,h_512,c_pad,w_350,f_png/v1/lxjxhmz13hf8rlbo3nto.png",
+      "src": "https://res.cloudinary.com/j2dkr5jj/image/upload/w_512,h_512,c_pad,b_rgb:ec4899,f_png/v1/lxjxhmz13hf8rlbo3nto.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
