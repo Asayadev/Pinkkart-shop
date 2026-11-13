@@ -2,7 +2,7 @@
   "name": "Pinkkart - Superfast Delivery",
   "short_name": "Pinkkart",
   "start_url": "/",
-  "display": "minimal-ui",
+  "display": "standalone",
  "background_color": "#0f111a",
 "theme_color": "#ec4899",
   "icons": [
