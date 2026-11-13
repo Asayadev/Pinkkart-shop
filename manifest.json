@@ -4,7 +4,7 @@
   "start_url": "/",
   "display": "standalone",
  "background_color": "#0f111a",
-"theme_color": "#ffffff",
+"theme_color": "#ec4899",
   "icons": [
     {
       "src": "https://res.cloudinary.com/j2dkr5jj/image/upload/w_192,h_192,c_fill,f_png/v1/lxjxhmz13hf8rlbo3nto.png",
