@@ -3,7 +3,7 @@
   "short_name": "Pinkkart",
   "start_url": "/",
   "display": "standalone",
- "background_color": "#0f111a",
+ "background_color": "#ec4899",
 "theme_color": "#ec4899",
   "icons": [
     {
