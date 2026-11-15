@@ -3781,7 +3781,7 @@ rewardPointsApplied() {
                     if (!this.useCashback || !this.loggedInUser || this.cartTotal < 300) return 0;
                     const availableCashback = Math.max(0, Number(this.loggedInUser.cashback) || 0);
                     const maxUsable = Math.max(0, this.cartTotal - this.vipDiscountApplied + this.deliveryChargeApplied);
-                    const cashbackLimit = this.cartTotal * 0.03;
+                    const cashbackLimit = this.cartTotal * 0.02;
                     const amount = Math.min(availableCashback, maxUsable, cashbackLimit);
                     return Math.round((amount + Number.EPSILON) * 100) / 100;
                 },
