@@ -2076,44 +2076,62 @@
 
     <div class="space-y-2 overflow-y-auto no-scrollbar" style="max-height: 180px;">
         
-        <!-- Referral Bonus History Items -->
-        <div v-for="history in userRewardHistory" :key="history.id" class="flex items-center justify-between bg-purple-50/50 rounded-2xl px-3 py-2 border border-purple-100">
-            <div class="flex items-center gap-2">
-                <span class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-[10px]">
-                    <i class="fas fa-user-plus"></i>
+        <!-- Single Unified Loop sorted by newest date first -->
+        <div v-for="item in walletPointsHistory" :key="item.id">
+            
+            <!-- A. Referral Bonus Item -->
+            <div v-if="item.type === 'reward'" class="flex items-center justify-between bg-purple-50/50 rounded-2xl px-3 py-2 border border-purple-100">
+                <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-[10px]">
+                        <i class="fas fa-user-plus"></i>
+                    </span>
+                    <div>
+                        <p class="text-gray-800 text-[11px] font-black">{{ item.title }}</p>
+                        <p class="text-gray-400 text-[9px] font-medium">{{ formatDate(item.date) }}</p>
+                    </div>
+                </div>
+                <span class="text-purple-700 font-black text-[10px] bg-purple-100 border border-purple-200 px-2 py-0.5 rounded-full">
+                    +{{ item.points }} Pts
                 </span>
+            </div>
+
+            <!-- B. Order Deduction Item (Cashback / Points used) -->
+<!-- B. Product-wise Cashback Earned (New Section) -->
+<div v-else-if="item.type === 'cashback_earned'" class="flex items-center justify-between bg-emerald-50/60 rounded-2xl px-3 py-2 border border-emerald-100">
+    <div class="flex items-center gap-2 min-w-0 pr-2">
+        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-[10px] shrink-0">
+            <i class="fas fa-coins"></i>
+        </span>
+        <div class="min-w-0">
+            <p class="text-gray-800 text-[11px] font-black truncate">Cashback on {{ item.productName }}</p>
+            <p class="text-gray-400 text-[9px] font-medium">Order #{{ item.orderId }} • {{ formatDate(item.date) }}</p>
+        </div>
+    </div>
+    <span class="text-emerald-700 font-black text-[10px] bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">
+        +₹{{ item.cashbackEarned.toFixed(2) }}
+    </span>
+</div>
+            <div v-else-if="item.type === 'order'" class="flex items-center justify-between bg-gray-50/80 rounded-2xl px-3 py-2 border border-gray-100/80">
                 <div>
-                    <p class="text-gray-800 text-[11px] font-black">{{ history.title }}</p>
-                    <p class="text-gray-400 text-[9px] font-medium">{{ formatDate(history.timestamp) }}</p>
+                    <p class="text-gray-800 text-[11px] font-black tracking-wide font-mono">#{{ item.orderId }}</p>
+                    <p class="text-gray-400 text-[9px] font-medium mt-0.5">{{ item.date ? new Date(item.date).toLocaleDateString('en-IN') : '' }}</p>
+                </div>
+                
+                <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                    <span v-if="item.cashbackUsed > 0" 
+                          class="inline-flex items-center gap-1 text-emerald-700 font-black text-[10px] bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full">
+                        <i class="fas fa-wallet text-[9px] text-emerald-600"></i>
+                        -₹{{ item.cashbackUsed.toFixed(2) }}
+                    </span>
+                    
+                    <span v-if="item.rewardPointsUsed > 0" 
+                          class="inline-flex items-center gap-1 text-purple-700 font-black text-[10px] bg-purple-50 border border-purple-200/60 px-2 py-0.5 rounded-full">
+                        <i class="fas fa-star text-[9px] text-purple-600"></i>
+                        -{{ item.rewardPointsUsed.toFixed(0) }} Pts
+                    </span>
                 </div>
             </div>
-            <span class="text-purple-700 font-black text-[10px] bg-purple-100 border border-purple-200 px-2 py-0.5 rounded-full">
-                +{{ history.points }} Pts
-            </span>
-        </div>
 
-        <!-- Order Deductions Items -->
-        <div v-for="o in userOrders.filter(o => Number(o.cashbackUsed) > 0 || Number(o.rewardPointsUsed) > 0).slice().sort((a,b)=>new Date(b.date)-new Date(a.date))" 
-             :key="o.id"
-             class="flex items-center justify-between bg-gray-50/80 rounded-2xl px-3 py-2 border border-gray-100/80">
-            <div>
-                <p class="text-gray-800 text-[11px] font-black tracking-wide font-mono">#{{ o.id.slice(-6).toUpperCase() }}</p>
-                <p class="text-gray-400 text-[9px] font-medium mt-0.5">{{ o.date ? new Date(o.date).toLocaleDateString('en-IN') : '' }}</p>
-            </div>
-            
-            <div class="flex items-center gap-1.5 flex-wrap justify-end">
-                <span v-if="Number(o.cashbackUsed) > 0" 
-                      class="inline-flex items-center gap-1 text-emerald-700 font-black text-[10px] bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full">
-                    <i class="fas fa-wallet text-[9px] text-emerald-600"></i>
-                    -₹{{ Number(o.cashbackUsed).toFixed(2) }}
-                </span>
-                
-                <span v-if="Number(o.rewardPointsUsed) > 0" 
-                      class="inline-flex items-center gap-1 text-purple-700 font-black text-[10px] bg-purple-50 border border-purple-200/60 px-2 py-0.5 rounded-full">
-                    <i class="fas fa-star text-[9px] text-purple-600"></i>
-                    -{{ Number(o.rewardPointsUsed).toFixed(0) }} Pts
-                </span>
-            </div>
         </div>
 
     </div>
@@ -3252,46 +3270,59 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
             </div>
         </div>
         <!-- ===== END VIP MEMBERSHIP MODAL ===== -->
-
-<!-- ===== GIFT UNBOXING MODAL ===== -->
-<div v-if="activeMilestoneModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" style="backdrop-filter: blur(5px);">
-    <div class="bg-gradient-to-b from-slate-900 to-indigo-950 rounded-3xl w-full max-w-xs p-5 border-2 border-amber-400 shadow-2xl text-center text-white relative">
+<!-- ===== MYSTERY BOX / LUCKY DRAW REVEAL MODAL ===== -->
+<div v-if="showMysteryModal" class="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4" style="backdrop-filter: blur(5px);" @click.self="showMysteryModal = false">
+    <div class="bg-gradient-to-b from-slate-900 to-indigo-950 rounded-3xl w-full max-w-sm p-6 border-2 border-amber-400 shadow-2xl text-center text-white relative animate-fade-in space-y-4">
         
-        <button @click="activeMilestoneModal = null" class="absolute top-3 right-3 text-gray-400 hover:text-white text-sm">
+        <!-- Close Button -->
+        <button @click="showMysteryModal = false" class="absolute top-3 right-3 text-gray-400 hover:text-white text-sm w-8 h-8 flex items-center justify-center rounded-full bg-white/10 transition">
             <i class="fas fa-times"></i>
         </button>
 
-        <div class="w-16 h-16 rounded-2xl bg-amber-400/20 border border-amber-300/40 flex items-center justify-center mx-auto mb-3 text-3xl shadow-lg">
+        <div class="w-16 h-16 rounded-2xl bg-amber-400/20 border border-amber-300/40 flex items-center justify-center mx-auto text-3xl shadow-lg animate-bounce">
             🎁
         </div>
 
-        <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">Level {{ activeMilestoneModal.level }} Milestone Reached!</p>
-        <h3 class="text-base font-black text-white mt-1">Aapka Special Gift Unlocked!</h3>
-
-        <!-- Admin Assigned Product Details -->
-        <div class="bg-white/10 rounded-2xl p-3 border border-white/15 my-3.5">
-            <img v-if="activeMilestoneModal.giftImage" :src="activeMilestoneModal.giftImage" class="w-24 h-24 object-contain mx-auto rounded-xl mb-2 bg-white/5 p-1">
-            <p class="text-xs font-black text-pink-300">{{ activeMilestoneModal.giftTitle || 'Special Surprise Home Gift' }}</p>
-            <p class="text-[10px] text-emerald-400 font-bold mt-0.5">+{{ activeMilestoneModal.points }} Reward Points Credited!</p>
+        <div>
+            <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">Level {{ activeMilestoneLevel }} Milestone Unlocked!</p>
+            <h3 class="text-base font-black text-white mt-1">Apni Kismat Aazmayein! ✨</h3>
+            <p class="text-xs text-gray-300 mt-1" v-if="!revealedGift">Neeche diye gaye <strong>3 Mystery Cards</strong> mein se koi ek card choose karein:</p>
+            <p class="text-xs text-emerald-400 font-bold mt-1" v-else>🎉 Badhai ho! Aapki kismat se yeh gift nikla hai:</p>
         </div>
 
-        <!-- Claim Action Button -->
-        <button v-if="!activeMilestoneModal.claimed" 
-                @click="claimAndCreateGiftOrder(activeMilestoneModal)"
-                :disabled="isClaimingGift"
-                class="w-full py-3 bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-950 rounded-xl font-black text-xs active:scale-95 transition shadow-lg flex items-center justify-center gap-1.5">
-            <i v-if="isClaimingGift" class="fas fa-spinner fa-spin"></i>
-            <span>{{ isClaimingGift ? 'Order create ho raha hai...' : 'Claim & Deliver to My Address 🚚' }}</span>
-        </button>
+        <!-- Phase 1: 3 Mystery Cards (Face Down) -->
+        <div v-if="!revealedGift" class="grid grid-cols-3 gap-3 my-3">
+            <div v-for="cIdx in [1, 2, 3]" :key="cIdx"
+                 @click="revealMysteryCard"
+                 class="bg-gradient-to-br from-amber-500/20 to-indigo-600/30 border-2 border-amber-400/40 hover:border-amber-400 rounded-2xl p-4 cursor-pointer transition transform hover:scale-105 flex flex-col items-center justify-center aspect-square shadow-lg">
+                <span class="text-3xl mb-1">⭐</span>
+                <span class="text-[10px] font-black text-amber-300 uppercase">Card {{ cIdx }}</span>
+            </div>
+        </div>
 
-        <p v-else class="text-xs font-bold text-emerald-400">
-            ✅ Yeh gift claim ho chuka hai aur dispatch ke liye nikal chuka hai!
-        </p>
+        <!-- Phase 2: Revealed Gift View (Kismat ka Khulasa) -->
+        <div v-else class="bg-amber-500/10 border-2 border-amber-400 rounded-2xl p-4 space-y-3 animate-fade-in">
+            <img :src="getDriveImageUrl(revealedGift.image) || 'https://placehold.co/100x100?text=Gift'" class="w-24 h-24 object-contain mx-auto rounded-xl bg-white/10 p-1 border border-amber-400/30" onerror="this.src='https://placehold.co/100x100?text=Gift'">
+            <div>
+                <h4 class="text-sm font-black text-amber-300">{{ revealedGift.title }}</h4>
+                <p class="text-[10px] text-gray-300 mt-0.5">Lucky Draw Winner Item!</p>
+            </div>
+        </div>
+
+        <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-2 text-[11px] font-bold text-amber-300">
+            ⭐ +{{ activeMilestonePoints }} Bonus Reward Points Credited!
+        </div>
+
+        <!-- Claim Button -->
+        <button v-if="revealedGift" @click="claimAndCreateGiftOrder" :disabled="claimingGift"
+                class="w-full bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-amber-950 py-3.5 rounded-2xl font-black text-xs transition shadow-lg active:scale-95 flex items-center justify-center gap-2">
+            <i v-if="claimingGift" class="fas fa-spinner fa-spin"></i>
+            <i v-else class="fas fa-shipping-fast"></i>
+            <span>{{ claimingGift ? 'Processing...' : 'Claim & Deliver to My Address 🚚' }}</span>
+        </button>
 
     </div>
 </div>
-
-    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.min.js" onerror="window.__pkScriptFallback('https://unpkg.com/vue@2.7.16/dist/vue.min.js', 'vue.js')"></script>
     <script>
@@ -3317,6 +3348,13 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
         new Vue({
             el: '#app',
             data: {
+tempRevealedGifts: {},
+showMysteryModal: false,
+activeMilestoneLevel: null,
+activeMilestonePoints: 0,
+milestoneGiftPool: [],
+revealedGift: null,
+claimingGift: false,
                userRewardHistory: [],
                activeMilestoneModal: null,
                dynamicMilestones: {},
@@ -3463,6 +3501,62 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
                 ],
             },
             computed: {
+       walletPointsHistory() {
+    let items = [];
+
+    // 1. Referral & Reward History items
+    if (this.userRewardHistory) {
+        this.userRewardHistory.forEach(h => {
+            items.push({
+                id: h.id,
+                date: h.timestamp || h.date,
+                type: 'reward',
+                title: h.title || 'Referral Bonus',
+                points: h.points
+            });
+        });
+    }
+
+    // 2. Product-wise Cashback Earned (Sirf Delivered orders ke liye)
+if (this.userOrders) {
+    this.userOrders.forEach(o => {
+        if (o.status === 'delivered' && Array.isArray(o.items)) {
+            o.items.forEach(it => {
+                const itemCb = Number(it.cashback || 0) * Number(it.quantity || 1);
+                if (itemCb > 0) {
+                    items.push({
+                        id: o.id + '_' + (it.id || 'item'),
+                        date: o.date,
+                        type: 'cashback_earned',
+                        orderId: o.id.slice(-6).toUpperCase(),
+                        productName: it.name,
+                        cashbackEarned: itemCb
+                    });
+                }
+            });
+        }
+    });
+}
+    // 3. Order Deductions (Cashback & Reward points used)
+    if (this.userOrders) {
+        this.userOrders.forEach(o => {
+            if (Number(o.cashbackUsed) > 0 || Number(o.rewardPointsUsed) > 0) {
+                items.push({
+                    id: o.id + '_used',
+                    date: o.date,
+                    type: 'order',
+                    orderId: o.id.slice(-6).toUpperCase(),
+                    cashbackUsed: Number(o.cashbackUsed || 0),
+                    rewardPointsUsed: Number(o.rewardPointsUsed || 0)
+                });
+            }
+        });
+    }
+
+    // Sabhi items ko date ke hisab se sort karein (Newest / Latest on Top)
+    return items.sort((a, b) => new Date(b.date) - new Date(a.date));
+},
+
         currentMonthName() {
             return new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
         },
@@ -3727,122 +3821,166 @@ rewardPointsApplied() {
             },
 
             methods: {
-    getMilestonePoints(level) {
-        const m = this.dynamicMilestones && this.dynamicMilestones[level];
-        return m ? Number(m.points || 0) : 0;
-    },
-    isMilestoneClaimed(level) {
-        if (!this.loggedInUser || !this.loggedInUser.claimedMilestones) return false;
-        return !!this.loggedInUser.claimedMilestones[level];
-    },
-
         async openMilestoneReward(level) {
-        if (this.currentMilestoneBought < level) {
-            this.showToast(`Is gift ke liye abhi ${level - this.currentMilestoneBought} items aur khareedein!`, 'info');
-            return;
-        }
-
-        // Pehle locally loaded dynamicMilestones se padhein, warna Firebase se fresh layein
-        let milestoneData = this.dynamicMilestones && this.dynamicMilestones[level];
-        if (!milestoneData) {
-            const snap = await database.ref(`admin_settings/milestones/${level}`).once('value');
-            milestoneData = snap.val();
-        }
-
-        milestoneData = milestoneData || {
-            giftTitle: 'Special Surprise Gift',
-            giftImage: '',
-            points: 10
-        };
-
-        this.activeMilestoneModal = {
-            level,
-            claimed: this.isMilestoneClaimed(level),
-            ...milestoneData
-        };
-    },
-
-    async claimAndCreateGiftOrder(milestone) {
-        if (!this.loggedInUser) return;
-        this.isClaimingGift = true;
-
-        try {
-            const uid = this.loggedInUser.uid;
-
-            // Double claim se bachne ke liye pehle lock lein
-            const claimLock = await database.ref(`users_email/${uid}/claimedMilestones/${milestone.level}`)
-                .transaction(cur => cur ? undefined : { claimed: true, giftTitle: milestone.giftTitle, claimedAt: new Date().toISOString() });
-            if (!claimLock.committed) {
-                this.showToast('Ye gift pehle hi claim ho chuka hai.', 'info');
-                this.activeMilestoneModal = null;
+            if (this.currentMilestoneBought < level) {
+                this.showToast(`Is mystery gift ke liye abhi ${level - this.currentMilestoneBought} items aur khareedein!`, 'info');
                 return;
             }
+
+            this.activeMilestoneLevel = level;
+
+            // 1. Admin settings se points aur multi-gifts pool load karein
+            let milestoneData = this.dynamicMilestones && this.dynamicMilestones[level];
+            if (!milestoneData) {
+                try {
+                    const snap = await database.ref(`admin_settings/milestones/${level}`).once('value');
+                    milestoneData = snap.val();
+                } catch(e) {}
+            }
+            milestoneData = milestoneData || { points: 10, gifts: [] };
+            this.activeMilestonePoints = Number(milestoneData.points || 10);
+
+            // 2. Check karein ki user ne yeh level pehle hi claim kiya hai kya
+            const userClaimed = this.loggedInUser && this.loggedInUser.claimedMilestones && this.loggedInUser.claimedMilestones[level];
+            if (userClaimed && userClaimed.giftTitle) {
+                this.revealedGift = {
+                    title: userClaimed.giftTitle,
+                    image: userClaimed.giftImage || ''
+                };
+            } else {
+                const giftsPool = milestoneData.gifts || [];
+                if (Array.isArray(giftsPool) && giftsPool.length > 0) {
+                    this.milestoneGiftPool = giftsPool;
+                } else {
+                    this.milestoneGiftPool = [{
+                        title: milestoneData.giftTitle || 'Special Surprise Gift',
+                        image: milestoneData.giftImage || ''
+                    }];
+                }
+
+                // Session memory check taaki modal close/open karne par gift change na ho
+                if (this.tempRevealedGifts && this.tempRevealedGifts[level]) {
+                    this.revealedGift = this.tempRevealedGifts[level];
+                } else {
+                    this.revealedGift = null; // Yahan null hone par hi 3 Mystery Cards dikhenge!
+                }
+            }
+
+            this.showMysteryModal = true;
+        },
+
+        revealMysteryCard() {
+            if (this.revealedGift) return; // Ek baar khulne ke baad dobara click nahi hoga
+
+            // Pool mein se random gift select hoga
+            const randomIndex = Math.floor(Math.random() * this.milestoneGiftPool.length);
+            const chosenGift = this.milestoneGiftPool[randomIndex];
             
-            // 1. ₹0 Free Gift Order banayein taaki tempo/bike delivery boy pahuncha sake
-            const giftOrder = {
-                customerName: this.loggedInUser.name || 'Customer',
-                customerPhone: this.loggedInUser.phone || '',
-                customerAddress: this.userProfile.address || this.loggedInUser.address || 'Address on Profile',
-                uid: uid,
-                items: [{
-                    id: 'milestone_gift_' + milestone.level,
-                    name: `🎁 Milestone Reward: ${milestone.giftTitle}`,
-                    price: 0,
-                    quantity: 1
-                }],
-                itemTotal: 0,
-                deliveryCharge: 0,
-                total: 0,
-                paymentMethod: 'FREE_GIFT',
-                status: 'pending',
-                date: new Date().toISOString()
-            };
+            this.revealedGift = chosenGift;
 
-            await database.ref('orders').push(giftOrder);
+            // Is level ke liye gift ko temporary memory me lock kar do
+            if (!this.tempRevealedGifts) this.tempRevealedGifts = {};
+            this.tempRevealedGifts[this.activeMilestoneLevel] = chosenGift;
+        },
 
-            // 2. User account me claimed mark karein
-            await database.ref(`users_email/${uid}/claimedMilestones/${milestone.level}`).set({
-                claimed: true,
-                giftTitle: milestone.giftTitle,
-                claimedAt: new Date().toISOString()
-            });
+        async claimAndCreateGiftOrder() {
+            if (!this.revealedGift || !this.loggedInUser) return;
+            
+            this.claimingGift = true;
+            try {
+                const wonGift = this.revealedGift;
+                const uid = this.loggedInUser.uid;
+                const level = this.activeMilestoneLevel;
 
-            if (!this.loggedInUser.claimedMilestones) this.loggedInUser.claimedMilestones = {};
-            this.loggedInUser.claimedMilestones[milestone.level] = true;
+                // Transaction lock taaki double claim na ho sake
+                const claimLock = await database.ref(`users_email/${uid}/claimedMilestones/${level}`)
+                    .transaction(cur => cur ? undefined : { 
+                        claimed: true, 
+                        giftTitle: wonGift.title, 
+                        giftImage: wonGift.image, 
+                        claimedAt: new Date().toISOString() 
+                    });
 
-            this.showToast('🎉 Mubarak! Gift order create ho gaya, jald deliver hoga!', 'success');
-            this.activeMilestoneModal = null;
-            this.loadMyOrders();
+                if (!claimLock.committed) {
+                    this.showToast('Yeh gift pehle hi claim ho chuka hai.', 'info');
+                    this.showMysteryModal = false;
+                    return;
+                }
 
-        } catch (e) {
-            console.error(e);
-            this.showToast('Claim karne me error aaya.', 'error');
-        } finally {
-            this.isClaimingGift = false;
-       }
-    },
-                goToCategoryProducts(catName) {
-                    this.activeTab = 'products';
-                    this.selectedProduct = null;
-                    this.searchQuery = '';
-                    if (catName && catName !== 'All') {
-                        // Direct match first
-                        const exactMatch = this.availableCategories.find(c => c === catName);
-                        if (exactMatch) {
-                            this.selectedCategory = exactMatch;
-                        } else {
-                            // Partial match
-                            const partial = this.availableCategories.find(c =>
-                                c.toLowerCase().includes(catName.toLowerCase()) ||
-                                catName.toLowerCase().includes(c.toLowerCase())
-                            );
-                            this.selectedCategory = partial || 'All';
-                        }
-                    } else {
-                        this.selectedCategory = 'All';
-                    }
-                    history.pushState({page:'tab'}, '');
-                },
+                // Delivery ke liye ₹0 Free Gift order create karein
+                const giftOrder = {
+                    customerName: this.loggedInUser.name || 'Customer',
+                    customerPhone: this.loggedInUser.phone || '',
+                    customerAddress: this.userProfile.address || this.loggedInUser.address || 'Address on Profile',
+                    uid: uid,
+                    items: [{
+                        id: 'milestone_gift_' + level,
+                        name: `🎁 Milestone Mystery Reward (Level ${level}): ${wonGift.title}`,
+                        price: 0,
+                        quantity: 1,
+                        image: wonGift.image
+                    }],
+                    itemTotal: 0,
+                    deliveryCharge: 0,
+                    total: 0,
+                    paymentMethod: 'FREE_GIFT',
+                    status: 'pending',
+                    date: new Date().toISOString()
+                };
+
+                await database.ref('orders').push(giftOrder);
+
+                // Local user state update
+                if (!this.loggedInUser.claimedMilestones) this.loggedInUser.claimedMilestones = {};
+                this.loggedInUser.claimedMilestones[level] = {
+                    claimed: true,
+                    giftTitle: wonGift.title,
+                    giftImage: wonGift.image
+                };
+
+                this.showToast(`✅ Badhai ho! "${wonGift.title}" claim ho gaya aur dispatch ke liye order ban gaya!`, 'success');
+                this.showMysteryModal = false;
+                this.loadMyOrders();
+
+            } catch (e) {
+                console.error('Claim gift error:', e);
+                this.showToast('Claim karne me error aaya: ' + e.message, 'error');
+            } finally {
+                this.claimingGift = false;
+            }
+        },
+      
+        getMilestonePoints(level) {
+            const m = this.dynamicMilestones && this.dynamicMilestones[level];
+            return m ? Number(m.points || 0) : 0;
+        },
+
+        isMilestoneClaimed(level) {
+            if (!this.loggedInUser || !this.loggedInUser.claimedMilestones) return false;
+            return !!this.loggedInUser.claimedMilestones[level];
+        },
+
+        goToCategoryProducts(catName) {
+            this.activeTab = 'products';
+            this.selectedProduct = null;
+            this.searchQuery = '';
+            if (catName && catName !== 'All') {
+                const exactMatch = this.availableCategories.find(c => c === catName);
+                if (exactMatch) {
+                    this.selectedCategory = exactMatch;
+                } else {
+                    const partial = this.availableCategories.find(c =>
+                        c.toLowerCase().includes(catName.toLowerCase()) ||
+                        catName.toLowerCase().includes(c.toLowerCase())
+                    );
+                    this.selectedCategory = partial || 'All';
+                }
+            } else {
+                this.selectedCategory = 'All';
+            }
+            history.pushState({page:'tab'}, '');
+        },
+
                 showToast(msg, type='success') {
                     const icons = { success:'fa-check-circle', error:'fa-times-circle', info:'fa-info-circle', order:'fa-bag-shopping', cart:'fa-cart-plus', warn:'fa-exclamation-triangle' };
                     const icon  = icons[type] || icons.success;
@@ -3875,7 +4013,7 @@ rewardPointsApplied() {
 
                     const shareUrl = `${baseUrl}?product=${encodeURIComponent(product.id || product.name)}`;
 
-                    const shareText = `🛍️ *${name}*${discText}\n💰 Only ₹${Number(price).toFixed(2)}\n\nCheck it out on *Pinkkart* — Your local delivery store!\n👉 ${shareUrl}`;
+                    const shareText = `??️ *${name}*${discText}\n💰 Only ₹${Number(price).toFixed(2)}\n\nCheck it out on *Pinkkart* — Your local delivery store!\n👉 ${shareUrl}`;
 
                     if (navigator.share) {
                         try {
