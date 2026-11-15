@@ -3821,7 +3821,7 @@ rewardPointsApplied() {
             },
 
             methods: {
-        async openMilestoneReward(level) {
+             async openMilestoneReward(level) {
             if (this.currentMilestoneBought < level) {
                 this.showToast(`Is mystery gift ke liye abhi ${level - this.currentMilestoneBought} items aur khareedein!`, 'info');
                 return;
@@ -3840,14 +3840,37 @@ rewardPointsApplied() {
             milestoneData = milestoneData || { points: 10, gifts: [] };
             this.activeMilestonePoints = Number(milestoneData.points || 10);
 
-            // 2. Check karein ki user ne yeh level pehle hi claim kiya hai kya
+            const uid = this.loggedInUser && this.loggedInUser.uid;
+
+            // 2. Check karein ki user ne yeh level pehle claim kiya hai kya
             const userClaimed = this.loggedInUser && this.loggedInUser.claimedMilestones && this.loggedInUser.claimedMilestones[level];
+            
+            // 3. Check karein ki kya pehle is level par gift reveal ho chuka hai (Local state ya Firebase se)
+            let userRevealed = this.loggedInUser && this.loggedInUser.revealedMilestones && this.loggedInUser.revealedMilestones[level];
+
+            // Agar local state me nahi hai, toh direct Firebase se check karo (Restart hone par bhi yahan se pakad lega)
+            if (!userClaimed && !userRevealed && uid) {
+                try {
+                    const revSnap = await database.ref(`users_email/${uid}/revealedMilestones/${level}`).once('value');
+                    if (revSnap.exists()) {
+                        userRevealed = revSnap.val();
+                        if (!this.loggedInUser.revealedMilestones) this.loggedInUser.revealedMilestones = {};
+                        this.loggedInUser.revealedMilestones[level] = userRevealed;
+                    }
+                } catch(e) {}
+            }
+
             if (userClaimed && userClaimed.giftTitle) {
+                // Agar claim ho chuka hai
                 this.revealedGift = {
                     title: userClaimed.giftTitle,
                     image: userClaimed.giftImage || ''
                 };
+            } else if (userRevealed && userRevealed.title) {
+                // 🔥 Agar pehle hi reveal ho chuka hai, toh wahi same gift dikhao! (App restart par bhi change nahi hoga)
+                this.revealedGift = userRevealed;
             } else {
+                // Agar pehle kabhi reveal nahi hua, tabhi gift pool load karke 3 Mystery Cards dikhenge
                 const giftsPool = milestoneData.gifts || [];
                 if (Array.isArray(giftsPool) && giftsPool.length > 0) {
                     this.milestoneGiftPool = giftsPool;
@@ -3857,19 +3880,13 @@ rewardPointsApplied() {
                         image: milestoneData.giftImage || ''
                     }];
                 }
-
-                // Session memory check taaki modal close/open karne par gift change na ho
-                if (this.tempRevealedGifts && this.tempRevealedGifts[level]) {
-                    this.revealedGift = this.tempRevealedGifts[level];
-                } else {
-                    this.revealedGift = null; // Yahan null hone par hi 3 Mystery Cards dikhenge!
-                }
+                this.revealedGift = null; // Yahan null hone par hi 3 Mystery Cards dikhenge
             }
 
             this.showMysteryModal = true;
         },
 
-        revealMysteryCard() {
+                async revealMysteryCard() {
             if (this.revealedGift) return; // Ek baar khulne ke baad dobara click nahi hoga
 
             // Pool mein se random gift select hoga
@@ -3878,9 +3895,24 @@ rewardPointsApplied() {
             
             this.revealedGift = chosenGift;
 
-            // Is level ke liye gift ko temporary memory me lock kar do
-            if (!this.tempRevealedGifts) this.tempRevealedGifts = {};
-            this.tempRevealedGifts[this.activeMilestoneLevel] = chosenGift;
+            // 🔥 TURANT FIREBASE MEIN SAVE (LOCK) KAR DO TAAKI APP RESTART PAR BHI NA BADLE
+            const uid = this.loggedInUser && this.loggedInUser.uid;
+            if (uid) {
+                try {
+                    await database.ref(`users_email/${uid}/revealedMilestones/${this.activeMilestoneLevel}`).set({
+                        title: chosenGift.title,
+                        image: chosenGift.image,
+                        revealedAt: new Date().toISOString()
+                    });
+
+                    // Local user state me bhi update kar lo
+                    if (!this.loggedInUser.revealedMilestones) this.loggedInUser.revealedMilestones = {};
+                    this.loggedInUser.revealedMilestones[this.activeMilestoneLevel] = chosenGift;
+                    localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
+                } catch(e) {
+                    console.error("Failed to save revealed gift to cloud:", e);
+                }
+            }
         },
 
         async claimAndCreateGiftOrder() {
