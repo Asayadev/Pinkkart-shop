@@ -713,6 +713,34 @@
                     </div>
                 </div>
 
+                <!-- ===== FLASH SALE (HOME) ===== -->
+                <div v-if="flashProducts.length > 0 && selectedCategory === 'All' && !searchQuery" class="rounded-2xl shadow-sm p-3 border border-red-200" style="background:linear-gradient(135deg,#fff1f2,#fff7ed);">
+                    <div class="flex items-center justify-between mb-2 px-1">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-sm"><i class="fas fa-bolt text-white text-[10px]"></i></span>
+                            <p class="text-sm font-black text-gray-800 leading-tight">{{ flashSale.title }}</p>
+                        </div>
+                        <div class="flex items-center gap-1 text-white font-black text-[11px]">
+                            <span class="text-[9px] text-red-600 font-bold mr-0.5">Ends in</span>
+                            <span v-if="flashCountdown.d > 0" class="bg-red-600 rounded px-1.5 py-0.5">{{ flashCountdown.d }}d</span>
+                            <span class="bg-red-600 rounded px-1.5 py-0.5">{{ flashCountdown.h }}</span>:<span class="bg-red-600 rounded px-1.5 py-0.5">{{ flashCountdown.m }}</span>:<span class="bg-red-600 rounded px-1.5 py-0.5">{{ flashCountdown.s }}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                        <div v-for="product in flashProducts" :key="'fs_'+product.id" @click="viewProductDetail(product)"
+                             class="relative flex-shrink-0 w-28 bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer border border-red-100">
+                            <span class="absolute top-1 left-1 z-10 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded">{{ flashSale.discountPercent }}% OFF</span>
+                            <div class="h-24 bg-white flex items-center justify-center p-2">
+                                <img :src="getDriveImageUrl(product.images && product.images.length ? product.images[0] : (product.image||'https://placehold.co/200x200?text=P'))" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/200x200?text=P'">
+                            </div>
+                            <div class="px-2 pb-2 pt-1">
+                                <p class="text-[10px] font-semibold text-gray-700 truncate leading-tight">{{ product.name }}</p>
+                                <p class="leading-tight mb-1"><span class="text-[11px] font-black text-red-600">₹{{ flashPriceOf(product.price) }}</span> <span class="text-[9px] text-gray-400 line-through">₹{{ Number(product.price).toFixed(0) }}</span></p>
+                                <button @click.stop="addToCart(product)" class="w-full text-[10px] font-black text-white bg-red-500 hover:bg-red-600 py-1 rounded-lg transition">+ Add</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <!-- ===== SPONSORED (HOME) ===== -->
                 <div v-if="sponsoredProducts.length > 0 && selectedCategory === 'All' && !searchQuery" class="bg-amber-50 rounded-2xl shadow-sm p-3 border border-amber-200">
                     <div class="flex items-center gap-2 mb-2 px-1">
@@ -880,6 +908,10 @@
                         <p class="text-gray-600 text-sm mt-3 leading-relaxed">{{ selectedProduct.description }}</p>
 
                         <!-- Size Chart Section (moved to top) -->
+                        <div v-if="isFlashProduct(selectedProduct)" class="mt-3 rounded-xl px-3 py-2 flex items-center justify-between" style="background:#fff1f2;border:1px solid #fecaca;">
+                            <p class="text-xs font-black text-red-600">⚡ Flash Sale: {{ flashSale.discountPercent }}% off — cart mein ₹{{ flashPriceOf(getEffectivePrice(selectedProduct)) }}</p>
+                            <p class="text-[10px] font-black text-red-600">{{ flashCountdown.h }}:{{ flashCountdown.m }}:{{ flashCountdown.s }}</p>
+                        </div>
                         <div v-if="selectedProduct.sizeChartImage" class="mt-4">
                             <button @click="showSizeChart = !showSizeChart" class="w-full flex items-center justify-between bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-800 px-4 py-3 rounded-xl font-bold text-sm transition">
                                 <span class="flex items-center gap-2">
@@ -3552,6 +3584,9 @@ claimingGift: false,
                 // Recently Viewed
                 recentlyViewed: [],
                 sponsorSeed: Math.random(),
+                flashSale: { isActive: false, title: 'Flash Sale ⚡', discountPercent: 0, endTime: 0 },
+                serverOffset: 0,
+                flashNow: Date.now(),
                 userActivity: (function(){ try { const a = JSON.parse(localStorage.getItem('sw_activity')); if(a && a.products && a.categories) return a; } catch(e){} return { products:{}, categories:{} }; })(),
                 // Smart Search
                 showSearchSuggestions: false,
@@ -3845,6 +3880,13 @@ rewardPointsApplied() {
                 // ===== RECOMMENDATIONS (rule-based, no AI cost) =====
                 recProductMap() { const m = {}; this.products.forEach(p => { m[p.id] = p; }); return m; },
                 recInStock() { return this.products.filter(p => !p.stockStatus || p.stockStatus === 'In stock'); },
+                flashSaleActive() { const f = this.flashSale; return !!(f && f.isActive && Number(f.discountPercent) > 0 && Number(f.endTime) > this.flashNow); },
+                flashRemaining() { return this.flashSaleActive ? Math.max(0, Number(this.flashSale.endTime) - this.flashNow) : 0; },
+                flashCountdown() {
+                    const t = Math.floor(this.flashRemaining / 1000); const pad = n => String(n).padStart(2, '0');
+                    return { d: Math.floor(t / 86400), h: pad(Math.floor((t % 86400) / 3600)), m: pad(Math.floor((t % 3600) / 60)), s: pad(t % 60) };
+                },
+                flashProducts() { return this.flashSaleActive ? this.recInStock.filter(p => p.inFlashSale === true).slice(0, 10) : []; },
                 sponsoredProducts() {
                     const now = this.membershipNow || Date.now();
                     const seed = this.sponsorSeed || 0.5;
@@ -4448,6 +4490,29 @@ rewardPointsApplied() {
                 nextSlide(){ if(this.banners.length){ this.currentBannerIndex=(this.currentBannerIndex+1)%this.banners.length; this.resetBannerTimer(); } },
                 prevSlide(){ if(this.banners.length){ this.currentBannerIndex=(this.currentBannerIndex-1+this.banners.length)%this.banners.length; this.resetBannerTimer(); } },
                 resetBannerTimer(){ if(this.bannerTimer)clearInterval(this.bannerTimer); this.startSlider(); },
+                // ===== FLASH SALE =====
+                flashPriceOf(base) { return Math.max(1, Math.round(Number(base) * (100 - Number(this.flashSale.discountPercent)) / 100)); },
+                isFlashProduct(p) { return !!(this.flashSaleActive && p && p.inFlashSale === true); },
+                syncFlashPricesInCart() {
+                    let changed = false;
+                    const fix = list => (list || []).forEach(it => {
+                        if (it && it.flashApplied && !this.flashSaleActive) { it.price = Number(it.origPrice); it.flashApplied = false; changed = true; }
+                    });
+                    fix(this.cartItems); fix(this.buyNowItem);
+                    if (changed) {
+                        localStorage.setItem('sw_cart', JSON.stringify(this.cartItems)); this.syncCartToCloud();
+                        this.showToast('⚡ Flash Sale khatam — cart ke prices normal ho gaye', 'info');
+                    }
+                },
+                startFlashTimer() {
+                    if (this._flashTimer) { clearInterval(this._flashTimer); this._flashTimer = null; }
+                    this.flashNow = Date.now() + this.serverOffset;
+                    if (!this.flashSale.isActive || Number(this.flashSale.endTime) <= this.flashNow) { this.syncFlashPricesInCart(); return; }
+                    this._flashTimer = setInterval(() => { // ticks only while a sale is running
+                        this.flashNow = Date.now() + this.serverOffset;
+                        if (Number(this.flashSale.endTime) <= this.flashNow) { clearInterval(this._flashTimer); this._flashTimer = null; this.syncFlashPricesInCart(); }
+                    }, 1000);
+                },
                 // ===== USER BEHAVIOR TRACKING (view=1, wishlist=3, cart=4; orders counted from order history) =====
                 trackActivity(type, product) {
                     try {
@@ -4498,11 +4563,13 @@ rewardPointsApplied() {
                     let variant = this.getSelectedVariant(product);
                     let weightLabel = variant ? variant.weight : '';
                     let finalPrice = variant ? Number(variant.price) : Number(product.price);
+                    const bnOrig = finalPrice; const bnFlash = this.isFlashProduct(product);
+                    if(bnFlash) finalPrice = this.flashPriceOf(finalPrice);
                     this.buyNowItem = [{
                         cartKey: product.id + '_buynow',
                         id: product.id,
-                        name: product.name + (sizeLabel && sizeLabel !== 'Free Size' ? ' (' + sizeLabel + ')' : ''),
-                        price: finalPrice,
+                        name: product.name + (sizeLabel && sizeLabel !== 'Free Size' ? ' (' + sizeLabel +')' : ''),
+                        price: finalPrice, origPrice: bnOrig, flashApplied: bnFlash,
                         weight: weightLabel,
                         image: img,
                         quantity: 1,
@@ -5100,16 +5167,19 @@ async creditDeliveredReferral(order) {
                     let variant = this.getSelectedVariant(product);
                     let weightLabel = variant ? variant.weight : '';
                     let finalPrice = variant ? Number(variant.price) : Number(product.price);
+                    let origPrice = finalPrice; let flashApplied = false;
+                    if(this.isFlashProduct(product)){ finalPrice = this.flashPriceOf(finalPrice); flashApplied = true; }
                     let cartKey = product.id + (weightLabel ? '_' + weightLabel : '') + (sizeLabel ? '_' + sizeLabel : '');
                     let existing = this.cartItems.find(i=>i.cartKey===cartKey);
                     if(existing){ existing.quantity+=1; }
-                    else { this.cartItems.push({ cartKey, id:product.id, name:product.name + (sizeLabel && sizeLabel!=='Free Size' ? ' ('+sizeLabel+')' : ''), price:finalPrice, weight:weightLabel, image:img, quantity:1, size:sizeLabel, shopkeeperName: product.shopkeeperName || product.shopkeeper || product.sellerName || '', shopkeeperId: product.shopkeeperId || product.sellerId || '' }); }
+                    else { this.cartItems.push({ cartKey, id:product.id, name:product.name + (sizeLabel && sizeLabel!=='Free Size' ? ' ('+sizeLabel+')' : ''), price:finalPrice, origPrice, flashApplied, weight:weightLabel, image:img, quantity:1, size:sizeLabel, shopkeeperName: product.shopkeeperName || product.shopkeeper || product.sellerName || '', shopkeeperId: product.shopkeeperId || product.sellerId || '' }); }
                     this.showToast(`🛒 ${product.name}${weightLabel ? ' ('+weightLabel+')' : ''}${sizeLabel && sizeLabel!=='Free Size' ? ' ['+sizeLabel+']' : ''} added to cart`, 'cart');
                     this.trackActivity('cart', product);
                     localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); this.syncCartToCloud();
                 },
                 updateQuantity(item,delta){ let newQty = item.quantity+delta; if(newQty<=0){ this.cartItems = this.cartItems.filter(i=>(i.cartKey||i.id)!==(item.cartKey||item.id)); }else{ item.quantity = newQty; } localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); this.syncCartToCloud(); },
                 openCheckout(){
+                    this.syncFlashPricesInCart();
                     if(!this.cartItems.length) return;
                     if(!this.loggedInUser){
                         this.pendingAction = 'checkout';
@@ -5169,6 +5239,7 @@ async creditDeliveredReferral(order) {
                     }
                     if (!this.uploadedImageUrl) { this.uploadError = 'Please upload payment receipt'; return; }
                     if (this.utrId.length < 6) { alert('Please enter a valid UTR ID'); return; }
+                    this.syncFlashPricesInCart();
                     const activeItems = this.isBuyNowMode && this.buyNowItem ? this.buyNowItem : this.cartItems;
                     const orderItems = activeItems.map(it => {
                         const originalProd = this.products.find(p => p.id === it.id);
@@ -5263,6 +5334,7 @@ async creditDeliveredReferral(order) {
                         alert('All fields required'); 
                         return; 
                     }
+                    this.syncFlashPricesInCart();
                     const activeItems = this.isBuyNowMode ? this.buyNowItem : this.cartItems;
                     const orderItems = activeItems.map(it=>({ 
                         id: it.id, 
@@ -5746,6 +5818,13 @@ if (this.reviewDraft.selectedFile && !this.isVipActive) {
                         } else {
                             this.deliverySettings = { deliveryCharge: 40, isActive: true, minOrderLimit: 199 };
                         }
+                    });
+                    // Server time offset (user phone ki ghadi badalne se timer galat nahi hoga)
+                    database.ref('.info/serverTimeOffset').on('value',(snap)=>{ this.serverOffset = Number(snap.val()) || 0; this.startFlashTimer(); });
+                    database.ref('app_settings/flashSale').on('value',(snapshot)=>{
+                        const d = snapshot.exists() ? snapshot.val() : {};
+                        this.flashSale = { isActive: d.isActive === true, title: d.title || 'Flash Sale ⚡', discountPercent: Number(d.discountPercent) || 0, endTime: Number(d.endTime) || 0 };
+                        this.startFlashTimer();
                     });
                 },
                 formatDate(iso){ if(!iso) return ''; let d=new Date(iso); return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); },
