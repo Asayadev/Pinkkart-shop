@@ -1208,7 +1208,8 @@
                         </div>
                         <div v-else-if="deliverySettings.isActive" class="mt-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2 flex items-center gap-2">
                             <i class="fas fa-check-circle text-green-500 text-sm flex-shrink-0"></i>
-                            <p class="text-xs font-bold text-green-700">🎉 Free Delivery! Admin-set minimum order ₹{{ Number(deliverySettings.minOrderLimit || 0).toFixed(0) }}+ hai.</p>
+                            <p v-if="isVipActive" class="text-xs font-bold text-green-700">👑 VIP Member — Free Delivery!</p>
+                            <p v-else class="text-xs font-bold text-green-700">🎉 Free Delivery! Admin-set minimum order ₹{{ Number(deliverySettings.minOrderLimit || 0).toFixed(0) }}+ hai.</p>
                         </div>
                         <div v-else class="mt-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2 flex items-center gap-2">
                             <i class="fas fa-check-circle text-green-500 text-sm flex-shrink-0"></i>
@@ -1571,15 +1572,26 @@
             <!-- ===== END TRACK ACTIVE ORDER ===== -->
             <div v-if="!loggedInUser" class="bg-white rounded-2xl p-8 text-center text-gray-400 border border-dashed"><i class="fas fa-lock text-3xl mb-2 text-gray-300"></i><p class="text-sm mb-3">Please login using your Mobile Number to see your orders.</p><button @click="showLoginModal = true" class="bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-bold">Login Now</button></div>
             <div v-else-if="orders.length === 0" class="bg-white rounded-2xl p-10 text-center text-gray-400"><i class="fas fa-box-open text-4xl mb-2 opacity-30"></i><p class="text-sm">No orders found for {{ loggedInUser.phone }}</p></div>
-            <div v-else class="space-y-6">
-                <div v-for="order in orders" :key="order.id" class="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-                    <div class="flex justify-between items-center border-b pb-3 mb-4 text-xs"><div><span class="font-bold text-blue-600">Order #{{ order.id.slice(-6) }}</span><span class="text-gray-400 ml-2">{{ formatDate(order.date) }}</span></div><div class="flex items-center gap-1.5"><span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">{{ order.paymentMethod || 'COD' }}</span><span :class="getStatusBadge(order.status)" class="px-2 py-0.5 rounded-full text-[10px] font-bold">{{ order.status === 'return_requested' || order.status === 'return_approved' || order.status === 'return_rejected' || order.status === 'exchange_requested' || order.status === 'exchange_approved' || order.status === 'exchange_rejected' ? (order.status.includes('requested') ? 'RETURN/EXCHANGE REQUESTED' : (order.status.includes('approved') ? 'RETURN/EXCHANGE APPROVED' : 'RETURN/EXCHANGE REJECTED')) : order.status.toUpperCase() }}</span></div></div>
-                    <div class="mb-6 px-2"><div v-if="order.status === 'rejected'" class="flex items-center justify-center gap-2 bg-red-50 text-red-700 p-3 rounded-xl text-xs font-bold border border-red-200"><i class="fas fa-times-circle text-base"></i> <span>Your order has been rejected / cancelled by the seller.</span></div><div v-else class="flex justify-between items-center relative"><div class="absolute top-4 left-0 w-full h-1 bg-gray-200 z-0 rounded-full"></div><div class="absolute top-4 left-0 h-1 bg-blue-500 z-0 rounded-full transition-all duration-500" :style="{ width: getTrackingProgressWidth(order.status) }"></div><div class="relative z-10 flex flex-col items-center w-1/4"><div :class="getTrackingCircleClass(order.status, 'pending')" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"> <i class="fas fa-clock"></i> </div><span class="text-[10px] font-bold mt-1.5 text-gray-600">Pending</span></div><div class="relative z-10 flex flex-col items-center w-1/4"><div :class="getTrackingCircleClass(order.status, 'confirmed')" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"> <i class="fas fa-check-circle"></i> </div><span class="text-[10px] font-bold mt-1.5 text-gray-600">Confirmed</span></div><div class="relative z-10 flex flex-col items-center w-1/4"><div :class="getTrackingCircleClass(order.status, 'shipped')" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"> <i class="fas fa-truck"></i> </div><span class="text-[10px] font-bold mt-1.5 text-gray-600">Shipped</span></div><div class="relative z-10 flex flex-col items-center w-1/4"><div :class="getTrackingCircleClass(order.status, 'delivered')" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"> <i class="fas fa-home"></i> </div><span class="text-[10px] font-bold mt-1.5 text-gray-600">Delivered</span></div></div></div>
-                    <div class="text-xs text-gray-600 space-y-1 mb-3"><p><strong>Deliver to:</strong> {{ order.customerName }} ({{ order.customerPhone }})</p><p><strong>Address:</strong> {{ order.customerAddress }}</p></div>
-                    <div class="bg-gray-50 p-2.5 rounded text-xs mb-3"><span v-for="it in order.items" class="inline-block mr-2 bg-white px-2 py-1 rounded border text-[10px] font-medium text-gray-700">{{ it.name }} x{{ it.quantity }}</span></div>
+            <div v-else class="space-y-3">
+                <div v-for="order in orders" :key="order.id" class="bg-white rounded-xl shadow-sm p-3 border border-gray-100">
+                    <div class="flex justify-between items-center border-b pb-2 mb-2 text-xs"><div><span class="font-bold text-blue-600">Order #{{ order.id.slice(-6) }}</span><span class="text-gray-400 ml-2">{{ formatDate(order.date) }}</span></div><div class="flex items-center gap-1.5"><span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">{{ order.paymentMethod || 'COD' }}</span><span :class="getStatusBadge(order.status)" class="px-2 py-0.5 rounded-full text-[10px] font-bold">{{ order.status === 'return_requested' || order.status === 'return_approved' || order.status === 'return_rejected' || order.status === 'exchange_requested' || order.status === 'exchange_approved' || order.status === 'exchange_rejected' ? (order.status.includes('requested') ? 'RETURN/EXCHANGE REQUESTED' : (order.status.includes('approved') ? 'RETURN/EXCHANGE APPROVED' : 'RETURN/EXCHANGE REJECTED')) : order.status.toUpperCase() }}</span></div></div>
+                    <div class="mb-2 px-1"><div v-if="order.status === 'rejected'" class="flex items-center justify-center gap-2 bg-red-50 text-red-700 p-2 rounded-xl text-[11px] font-bold border border-red-200"><i class="fas fa-times-circle text-base"></i> <span>Your order has been rejected / cancelled by the seller.</span></div><div v-else class="flex justify-between items-center relative"><div class="absolute top-3 left-0 w-full h-1 bg-gray-200 z-0 rounded-full"></div><div class="absolute top-3 left-0 h-1 bg-blue-500 z-0 rounded-full transition-all duration-500" :style="{ width: getTrackingProgressWidth(order.status) }"></div><div class="relative z-10 flex flex-col items-center w-1/4"><div :class="getTrackingCircleClass(order.status, 'pending')" class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300"> <i class="fas fa-clock"></i> </div><span class="text-[9px] font-bold mt-0.5 text-gray-600">Pending</span></div><div class="relative z-10 flex flex-col items-center w-1/4"><div :class="getTrackingCircleClass(order.status, 'confirmed')" class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300"> <i class="fas fa-check-circle"></i> </div><span class="text-[9px] font-bold mt-0.5 text-gray-600">Confirmed</span></div><div class="relative z-10 flex flex-col items-center w-1/4"><div :class="getTrackingCircleClass(order.status, 'shipped')" class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300"> <i class="fas fa-truck"></i> </div><span class="text-[9px] font-bold mt-0.5 text-gray-600">Shipped</span></div><div class="relative z-10 flex flex-col items-center w-1/4"><div :class="getTrackingCircleClass(order.status, 'delivered')" class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300"> <i class="fas fa-home"></i> </div><span class="text-[9px] font-bold mt-0.5 text-gray-600">Delivered</span></div></div></div>
+                    <p class="text-[10px] text-gray-500 mb-2 truncate"><i class="fas fa-map-marker-alt text-pink-400 mr-1"></i>{{ order.customerName }} &bull; {{ order.customerAddress }}</p>
+                    <div class="border border-gray-100 rounded-xl divide-y divide-gray-100 overflow-hidden mb-2">
+                        <div v-for="(it, idx) in order.items" :key="idx" class="flex gap-2 p-2 bg-white">
+                            <img :src="getOrderItemImage(it)" class="w-12 h-12 object-contain bg-gray-50 rounded-lg border border-gray-100 flex-shrink-0" alt="" onerror="this.src='https://placehold.co/100x100?text=P'">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-bold text-gray-800 leading-snug" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ it.name }}</p>
+                                <p class="text-[10px] text-gray-500 mt-0.5"><span v-if="it.weight">{{ it.weight }} &bull; </span>Qty: {{ it.quantity }}</p>
+                                <p class="text-xs font-black text-gray-900 mt-1">₹{{ (Number(it.price || 0) * Number(it.quantity || 1)).toFixed(0) }} <span v-if="Number(it.quantity) > 1" class="text-[10px] font-medium text-gray-400">(₹{{ Number(it.price || 0) }} each)</span></p>
+                            </div>
+                            <button @click="buyAgainItem(it)" class="self-center flex-shrink-0 text-[10px] font-bold text-pink-600 border border-pink-300 bg-pink-50 rounded-full px-2.5 py-1 whitespace-nowrap active:scale-95"><i class="fas fa-redo mr-1"></i>Buy Again</button>
+                        </div>
+                    </div>
+                    <button v-if="order.items && order.items.length > 1" @click="buyAgainOrder(order)" class="w-full mb-2 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-bold shadow-sm active:scale-95"><i class="fas fa-redo mr-1"></i> Pura Order Dobara Karein</button>
                     
                     <!-- Review Section — only for delivered orders -->
-                    <div v-if="order.status === 'delivered'" class="mt-4 border-t pt-4">
+                    <div v-if="order.status === 'delivered'" class="mt-2 border-t pt-2">
                         <!-- Already reviewed -->
                         <div v-if="order.rating" class="bg-green-50 border border-green-100 rounded-xl p-3 flex items-center gap-3">
                             <div class="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -1594,7 +1606,7 @@
                             </div>
                         </div>
                         <!-- Review form -->
-                        <div v-else class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                        <div v-else-if="reviewOpen[order.id]" class="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-3">
                             <p class="text-xs font-bold text-gray-800 flex items-center gap-1.5"><i class="fas fa-pencil-alt text-amber-600"></i> Rate & Review This Order</p>
                             <!-- Stars -->
                             <div>
@@ -1660,9 +1672,10 @@
                                 <span v-else><i class="fas fa-paper-plane mr-1"></i> Review Submit Karein</span>
                             </button>
                         </div>
+                        <button v-else @click="$set(reviewOpen, order.id, true)" class="w-full py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 text-[11px] font-bold"><i class="fas fa-star mr-1"></i> Rate & Review Karein</button>
                     </div>
 
-                                       <div class="mt-3 flex justify-between items-center">
+                                       <div class="mt-2 flex justify-between items-center">
                         <div class="flex items-center gap-2">
                             <!-- ❌ Cancel Button: Sirf Pending orders me dikhega -->
                             <button v-if="order.status === 'pending'" 
@@ -2641,7 +2654,7 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
                                 <span class="font-semibold flex items-center gap-1">
                                     <i class="fas fa-motorcycle text-xs"></i>
                                     Delivery Charge
-                                    <span v-if="deliverySettings.isActive && isVipActive && deliveryChargeApplied > 0" class="text-[9px] font-bold text-amber-600">VIP 10% off</span>
+                                    <span v-if="deliverySettings.isActive && isVipActive" class="text-[9px] font-bold text-amber-600">👑 VIP</span>
                                     <span v-if="deliveryChargeApplied === 0" class="text-[10px] font-black bg-green-100 text-green-700 px-1.5 rounded-full">FREE</span>
                                 </span>
                                 <span class="font-bold">{{ deliveryChargeApplied > 0 ? '₹' + deliveryChargeApplied.toFixed(2) : '₹0.00' }}</span>
@@ -3438,6 +3451,7 @@ claimingGift: false,
                 
                 // New States for Reviews & Drive Upload
                 googleDriveScriptUrl: 'https://script.google.com/macros/s/AKfycbzl16sL-vmJq-KIQh8yXPXwzDyhEArRUorinpTfrN6AronsDVbmT9tAzK3KFp4XpeMOtA/exec',
+                reviewOpen: {},
                 reviewDraft: { rating: 0, comment: '', base64File: '', fileName: '', fileType: '' },
                 isUploadingReview: false,
                 globalReviews: [],
@@ -3598,8 +3612,14 @@ if (this.userOrders) {
                         };
                     }
                     userSpendMap[uid].totalSpent += Number(o.total || 0);
+                    // Kisi bhi order me avatar mile to use le lo (sirf pehle order par depend nahi)
+                    if (!userSpendMap[uid].avatarUrl) userSpendMap[uid].avatarUrl = o.customerAvatar || o.userAvatar || '';
                 }
             });
+
+            // Apna avatar hamesha apni profile photo se
+            const meUid = this.loggedInUser && this.loggedInUser.uid;
+            if (meUid && userSpendMap[meUid] && this.userAvatarUrl) userSpendMap[meUid].avatarUrl = this.userAvatarUrl;
 
             return Object.values(userSpendMap)
                 .sort((a, b) => b.totalSpent - a.totalSpent);
@@ -3770,10 +3790,11 @@ rewardPointsApplied() {
                 deliveryChargeApplied() {
                     const items = this.isBuyNowMode && this.buyNowItem ? this.buyNowItem : this.cartItems;
                     if (items.length === 0 || !this.deliverySettings.isActive) return 0;
+                    if (this.isVipActive) return 0; // VIP members: always FREE delivery
                     const minimumOrder = Math.max(0, Number(this.deliverySettings.minOrderLimit) || 0);
                     if (this.cartTotal >= minimumOrder) return 0;
                     const adminCharge = Math.max(0, Number(this.deliverySettings.deliveryCharge) || 0);
-                    const amount = this.isVipActive ? adminCharge * 0.90 : adminCharge;
+                    const amount = adminCharge;
                     return Math.round((amount + Number.EPSILON) * 100) / 100;
                 },
 
@@ -4984,7 +5005,8 @@ async creditDeliveredReferral(order) {
                             cashback: itemCashback,
                             shopkeeperName: it.shopkeeperName || it.shopkeeper || '',
                             shopkeeper: it.shopkeeperName || it.shopkeeper || '',
-                            shopkeeperId: it.shopkeeperId || ''
+                            shopkeeperId: it.shopkeeperId || '',
+                            image: (originalProd && ((originalProd.images && originalProd.images[0]) || originalProd.image)) || it.image || ''
                         };
                     });
                     const totalCashbackEarnable = orderItems.reduce((sum, it) => sum + (Number(it.cashback || 0) * Number(it.quantity || 1)), 0);
@@ -5008,6 +5030,7 @@ async creditDeliveredReferral(order) {
                         rewardPointsUsed: usedPoints,
                         totalCashbackEarnable: totalCashbackEarnable,
                         cashbackCredited: false,
+                        customerAvatar: (this.userAvatarUrl && !String(this.userAvatarUrl).startsWith('data:')) ? this.userAvatarUrl : '',
                         total: this.grandTotal,
                         status: 'pending',
                         paymentMethod: 'ONLINE',
@@ -5073,7 +5096,8 @@ async creditDeliveredReferral(order) {
                         cashback: Number(((this.products.find(p=>p.id===it.id)||{}).cashback) || it.cashback || 0), 
                         shopkeeperName: it.shopkeeperName||it.shopkeeper||'', 
                         shopkeeper: it.shopkeeperName||it.shopkeeper||'', 
-                        shopkeeperId: it.shopkeeperId||'' 
+                        shopkeeperId: it.shopkeeperId||'',
+                        image: (() => { const pr = this.products.find(p=>p.id===it.id) || {}; return (pr.images && pr.images[0]) || pr.image || it.image || ''; })()
                     }));
                     const totalCashbackEarnable = orderItems.reduce((sum, it) => sum + (Number(it.cashback || 0) * Number(it.quantity || 1)), 0);
                     const usedCashback = Number(this.cashbackApplied || 0);
@@ -5097,7 +5121,8 @@ async creditDeliveredReferral(order) {
                         couponCode: this.appliedCoupon ? this.appliedCoupon.code : '',
                         couponDiscount: Number(this.couponDiscountApplied || 0),
                         totalCashbackEarnable: totalCashbackEarnable, 
-                        cashbackCredited: false, 
+                        cashbackCredited: false,
+                        customerAvatar: (this.userAvatarUrl && !String(this.userAvatarUrl).startsWith('data:')) ? this.userAvatarUrl : '', 
                         total: this.grandTotal, 
                         status: 'pending', 
                         paymentMethod: 'COD', 
@@ -5549,6 +5574,54 @@ if (this.reviewDraft.selectedFile && !this.isVipActive) {
                 formatDate(iso){ if(!iso) return ''; let d=new Date(iso); return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); },
                 getStatusBadge(status){ const map={ pending:'bg-yellow-100 text-yellow-800', confirmed:'bg-blue-100 text-blue-800', shipped:'bg-purple-100 text-purple-800', delivered:'bg-green-100 text-green-800', rejected:'bg-red-100 text-red-800', return_requested:'bg-orange-100 text-orange-800', exchange_requested:'bg-indigo-100 text-indigo-800', return_approved:'bg-emerald-100 text-emerald-800', exchange_approved:'bg-teal-100 text-teal-800', return_rejected:'bg-rose-100 text-rose-800', exchange_rejected:'bg-pink-100 text-pink-800' }; return map[status]||'bg-gray-100 text-gray-800'; },
                 startSlider(){ this.bannerTimer = setInterval(()=>this.nextSlide(),4000); },
+                addOrderItemToCart(it) {
+                    const product = (this.products || []).find(x => x.id === (it && it.id));
+                    if (!product) { this.showToast((it && it.name ? it.name + ': ' : '') + 'ab available nahi hai', 'error'); return false; }
+                    if (product.stockStatus && product.stockStatus !== 'In stock') { this.showToast(product.name + ' abhi out of stock hai', 'error'); return false; }
+                    // Size wala product: size user ko khud select karna hoga
+                    if (product.sizes && product.sizes.length) {
+                        this.viewProductDetail(product);
+                        this.showToast('Size select karke cart me add karein', 'error');
+                        return null;
+                    }
+                    const weightLabel = (it && it.weight) ? it.weight : '';
+                    let finalPrice = Number(product.price);
+                    if (product.hasVariants && product.variants && product.variants.length) {
+                        const v = product.variants.find(x => x.weight === weightLabel) || product.variants[0];
+                        finalPrice = Number(v.price);
+                    }
+                    const qty = Math.max(1, Number(it.quantity) || 1);
+                    const cartKey = product.id + (weightLabel ? '_' + weightLabel : '') + '_Free Size';
+                    const existing = this.cartItems.find(i => i.cartKey === cartKey);
+                    if (existing) { existing.quantity += qty; }
+                    else {
+                        const img = (product.images && product.images[0]) ? product.images[0] : product.image;
+                        this.cartItems.push({ cartKey, id: product.id, name: product.name, price: finalPrice, weight: weightLabel, image: img, quantity: qty, size: 'Free Size', shopkeeperName: product.shopkeeperName || product.shopkeeper || product.sellerName || '', shopkeeperId: product.shopkeeperId || product.sellerId || '' });
+                    }
+                    localStorage.setItem('sw_cart', JSON.stringify(this.cartItems)); this.syncCartToCloud();
+                    return true;
+                },
+                openCartTab() {
+                    this.isBuyNowMode = false; this.buyNowItem = null; this.activeTab = 'cart';
+                    history.pushState({ page: 'tab' }, '');
+                },
+                buyAgainItem(it) {
+                    const r = this.addOrderItemToCart(it);
+                    if (r === true) { this.showToast('🛒 Cart me add ho gaya', 'cart'); this.openCartTab(); }
+                },
+                buyAgainOrder(order) {
+                    let added = 0;
+                    (order.items || []).forEach(it => { if (this.addOrderItemToCart(it) === true) added++; });
+                    if (added > 0) { this.showToast('🛒 ' + added + ' item cart me add ho gaye', 'cart'); this.openCartTab(); }
+                },
+                getOrderItemImage(it) {
+                    let img = it && it.image ? it.image : '';
+                    if (!img) {
+                        const p = (this.products || []).find(x => x.id === (it && it.id));
+                        if (p) img = (p.images && p.images.length) ? p.images[0] : (p.image || '');
+                    }
+                    return this.getDriveImageUrl(img) || 'https://placehold.co/100x100?text=P';
+                },
                 getDriveImageUrl(url) {
                     if (!url) return '';
                     let id = null;
