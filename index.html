@@ -713,6 +713,47 @@
                     </div>
                 </div>
 
+                <!-- ===== SPONSORED (HOME) ===== -->
+                <div v-if="sponsoredProducts.length > 0 && selectedCategory === 'All' && !searchQuery" class="bg-amber-50 rounded-2xl shadow-sm p-3 border border-amber-200">
+                    <div class="flex items-center gap-2 mb-2 px-1">
+                        <span class="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm"><i class="fas fa-bullhorn text-white text-[10px]"></i></span>
+                        <div><p class="text-sm font-black text-gray-800 leading-tight">Sponsored 📢</p><p class="text-[10px] text-gray-400 font-medium">Partner stores ke special products</p></div>
+                    </div>
+                    <div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                        <div v-for="product in sponsoredProducts" :key="'sp_'+product.id" @click="viewProductDetail(product)"
+                             class="relative flex-shrink-0 w-28 bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer border border-amber-200">
+                            <span class="absolute top-1 left-1 z-10 bg-amber-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded">Sponsored</span>
+                            <div class="h-24 bg-white flex items-center justify-center p-2">
+                                <img :src="getDriveImageUrl(product.images && product.images.length ? product.images[0] : (product.image||'https://placehold.co/200x200?text=P'))" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/200x200?text=P'">
+                            </div>
+                            <div class="px-2 pb-2 pt-1">
+                                <p class="text-[10px] font-semibold text-gray-700 truncate leading-tight">{{ product.name }}</p>
+                                <p class="text-[11px] font-black text-pink-600 mb-1">₹{{ Number(product.price).toFixed(0) }}</p>
+                                <button @click.stop="addToCart(product)" class="w-full text-[10px] font-black text-white bg-pink-500 hover:bg-pink-600 py-1 rounded-lg transition">+ Add</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- ===== AI-LITE RECOMMENDATIONS (HOME) ===== -->
+                <div v-if="forYouProducts.length > 0 && selectedCategory === 'All' && !searchQuery" class="bg-white rounded-2xl shadow-sm p-3 border border-pink-50">
+                    <div class="flex items-center gap-2 mb-2 px-1">
+                        <span class="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-sm"><i class="fas fa-magic text-white text-[10px]"></i></span>
+                        <div><p class="text-sm font-black text-gray-800 leading-tight">Aapke liye ✨</p><p class="text-[10px] text-gray-400 font-medium">Aapki pasand ke hisaab se</p></div>
+                    </div>
+                    <div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                        <div v-for="product in forYouProducts" :key="'fy_'+product.id" @click="viewProductDetail(product)"
+                             class="flex-shrink-0 w-28 bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer border border-pink-100">
+                            <div class="h-24 bg-white flex items-center justify-center p-2">
+                                <img :src="getDriveImageUrl(product.images && product.images.length ? product.images[0] : (product.image||'https://placehold.co/200x200?text=P'))" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/200x200?text=P'">
+                            </div>
+                            <div class="px-2 pb-2 pt-1">
+                                <p class="text-[10px] font-semibold text-gray-700 truncate leading-tight">{{ product.name }}</p>
+                                <p class="text-[11px] font-black text-pink-600 mb-1">₹{{ Number(product.price).toFixed(0) }}</p>
+                                <button @click.stop="addToCart(product)" class="w-full text-[10px] font-black text-white bg-pink-500 hover:bg-pink-600 py-1 rounded-lg transition">+ Add</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="flex justify-between items-center pt-2">
                     <h2 class="text-base font-bold text-gray-800">✨ {{ selectedCategory }} Products</h2>
                     <span class="text-xs text-gray-400">{{ smartFilteredProducts.length }} items</span>
@@ -992,6 +1033,26 @@
                     </div>
                 </div>
 
+                <div v-if="boughtTogether.length > 0" class="bg-white rounded-2xl shadow-sm p-4 animate-fade-in">
+                    <div class="flex items-center gap-2 mb-2 px-1">
+                        <span class="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-sm"><i class="fas fa-link text-white text-[10px]"></i></span>
+                        <div><p class="text-sm font-black text-gray-800 leading-tight">Isse saath kharide jaate hain 🛍️</p><p class="text-[10px] text-gray-400 font-medium">Aapne pehle ye saath mein liya tha</p></div>
+                    </div>
+                    <div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                        <div v-for="product in boughtTogether" :key="'bt_'+product.id" @click="viewProductDetail(product)"
+                             class="flex-shrink-0 w-28 bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer border border-pink-100">
+                            <div class="h-24 bg-white flex items-center justify-center p-2">
+                                <img :src="getDriveImageUrl(product.images && product.images.length ? product.images[0] : (product.image||'https://placehold.co/200x200?text=P'))" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/200x200?text=P'">
+                            </div>
+                            <div class="px-2 pb-2 pt-1">
+                                <p class="text-[10px] font-semibold text-gray-700 truncate leading-tight">{{ product.name }}</p>
+                                <p class="text-[11px] font-black text-pink-600 mb-1">₹{{ Number(product.price).toFixed(0) }}</p>
+                                <button @click.stop="addToCart(product)" class="w-full text-[10px] font-black text-white bg-pink-500 hover:bg-pink-600 py-1 rounded-lg transition">+ Add</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div v-if="relatedProducts.length > 0" class="bg-white rounded-2xl shadow-sm p-4 animate-fade-in">
                     <h3 class="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
                         <i class="fas fa-layer-group text-blue-600"></i> Related Products
@@ -1221,6 +1282,25 @@
                         </div>
                     </div>
                     <button @click="openCheckout" class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md"><i class="fas fa-truck"></i> Proceed to Checkout</button>
+                </div>
+            </div>
+
+            <!-- ===== FREE DELIVERY NUDGE ===== -->
+            <div v-if="freeDeliveryNudge.length > 0" class="mt-4 bg-green-50 border border-green-200 rounded-2xl p-3">
+                <p class="text-sm font-black text-green-800 leading-tight">🚚 Free delivery ke liye ye add karein</p>
+                <p class="text-[10px] text-green-700 font-medium mb-2">Sirf ₹{{ Math.max(0, Number(deliverySettings.minOrderLimit||0) - cartTotal).toFixed(0) }} aur — delivery FREE!</p>
+                <div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                    <div v-for="product in freeDeliveryNudge" :key="'fd_'+product.id" @click="viewProductDetail(product)"
+                             class="flex-shrink-0 w-28 bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer border border-pink-100">
+                            <div class="h-24 bg-white flex items-center justify-center p-2">
+                                <img :src="getDriveImageUrl(product.images && product.images.length ? product.images[0] : (product.image||'https://placehold.co/200x200?text=P'))" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/200x200?text=P'">
+                            </div>
+                            <div class="px-2 pb-2 pt-1">
+                                <p class="text-[10px] font-semibold text-gray-700 truncate leading-tight">{{ product.name }}</p>
+                                <p class="text-[11px] font-black text-pink-600 mb-1">₹{{ Number(product.price).toFixed(0) }}</p>
+                                <button @click.stop="addToCart(product)" class="w-full text-[10px] font-black text-white bg-pink-500 hover:bg-pink-600 py-1 rounded-lg transition">+ Add</button>
+                            </div>
+                        </div>
                 </div>
             </div>
 
@@ -3471,6 +3551,8 @@ claimingGift: false,
                 selectedSize: '',
                 // Recently Viewed
                 recentlyViewed: [],
+                sponsorSeed: Math.random(),
+                userActivity: (function(){ try { const a = JSON.parse(localStorage.getItem('sw_activity')); if(a && a.products && a.categories) return a; } catch(e){} return { products:{}, categories:{} }; })(),
                 // Smart Search
                 showSearchSuggestions: false,
                 searchSuggestions: [],
@@ -3759,6 +3841,72 @@ rewardPointsApplied() {
                     });
                     else if (this.sortBy === 'rating') list = [...list].sort((a,b) => (Number(this.getProductAvgRating(b.id))||0) - (Number(this.getProductAvgRating(a.id))||0));
                     return list;
+                },
+                // ===== RECOMMENDATIONS (rule-based, no AI cost) =====
+                recProductMap() { const m = {}; this.products.forEach(p => { m[p.id] = p; }); return m; },
+                recInStock() { return this.products.filter(p => !p.stockStatus || p.stockStatus === 'In stock'); },
+                sponsoredProducts() {
+                    const now = this.membershipNow || Date.now();
+                    const seed = this.sponsorSeed || 0.5;
+                    const hash = p => { let h = 0; String(p.id).split('').forEach(c => { h += c.charCodeAt(0); }); return (h * seed * 1000) % 1; };
+                    return this.recInStock
+                        .filter(p => p.isSponsored === true && p.sponsoredUntil && Date.parse(p.sponsoredUntil + 'T23:59:59') > now)
+                        .sort((a, b) => hash(a) - hash(b)) // rotate so every sponsor gets a chance
+                        .slice(0, 5);
+                },
+                forYouProducts() {
+                    const act = this.userActivity || { products:{}, categories:{} };
+                    const map = this.recProductMap;
+                    const pScore = Object.assign({}, act.products);
+                    const cScore = Object.assign({}, act.categories);
+                    (this.orders || []).forEach(o => (o.items || []).forEach(it => {
+                        if (!it || !it.id) return;
+                        pScore[it.id] = (pScore[it.id] || 0) + 5;
+                        const pr = map[it.id]; if (pr && pr.category) cScore[pr.category] = (cScore[pr.category] || 0) + 5;
+                    }));
+                    const inCart = new Set(this.cartItems.map(i => i.id));
+                    return this.recInStock
+                        .map(p => ({ p, score: (pScore[p.id] || 0) + (cScore[p.category] || 0) * 0.5 }))
+                        .filter(x => x.score > 0 && !inCart.has(x.p.id))
+                        .sort((a, b) => b.score - a.score)
+                        .slice(0, 8).map(x => x.p);
+                },
+                reorderProducts() {
+                    const map = this.recProductMap, count = {}, last = {};
+                    (this.orders || []).forEach((o, oi) => (o.items || []).forEach(it => {
+                        if (!it || !it.id || !map[it.id]) return;
+                        count[it.id] = (count[it.id] || 0) + 1;
+                        if (last[it.id] === undefined) last[it.id] = oi; // orders are newest-first
+                    }));
+                    return Object.keys(count)
+                        .filter(id => !map[id].stockStatus || map[id].stockStatus === 'In stock')
+                        .sort((a, b) => (count[b] - count[a]) || (last[a] - last[b]))
+                        .slice(0, 8).map(id => map[id]);
+                },
+                boughtTogether() {
+                    const cur = this.selectedProduct; if (!cur) return [];
+                    const map = this.recProductMap, pair = {};
+                    (this.orders || []).forEach(o => {
+                        const ids = [...new Set((o.items || []).map(it => it && it.id).filter(Boolean))];
+                        if (ids.indexOf(cur.id) === -1) return;
+                        ids.forEach(id => { if (id !== cur.id) pair[id] = (pair[id] || 0) + 1; });
+                    });
+                    return Object.keys(pair)
+                        .filter(id => map[id] && (!map[id].stockStatus || map[id].stockStatus === 'In stock'))
+                        .sort((a, b) => pair[b] - pair[a])
+                        .slice(0, 6).map(id => map[id]);
+                },
+                freeDeliveryNudge() {
+                    if (this.isBuyNowMode || !this.cartItems.length || this.isVipActive || !this.deliverySettings.isActive) return [];
+                    const min = Math.max(0, Number(this.deliverySettings.minOrderLimit) || 0);
+                    const gap = min - this.cartTotal;
+                    if (gap <= 0) return [];
+                    const inCart = new Set(this.cartItems.map(i => i.id));
+                    const act = (this.userActivity && this.userActivity.products) || {};
+                    return this.recInStock
+                        .filter(p => !inCart.has(p.id) && Number(p.price) > 0 && Number(p.price) >= gap && Number(p.price) <= gap * 3)
+                        .sort((a, b) => ((act[b.id] || 0) - (act[a.id] || 0)) || (Number(a.price) - Number(b.price)))
+                        .slice(0, 6);
                 },
                 relatedProducts() { 
                     if (!this.selectedProduct) return []; 
@@ -4300,7 +4448,35 @@ rewardPointsApplied() {
                 nextSlide(){ if(this.banners.length){ this.currentBannerIndex=(this.currentBannerIndex+1)%this.banners.length; this.resetBannerTimer(); } },
                 prevSlide(){ if(this.banners.length){ this.currentBannerIndex=(this.currentBannerIndex-1+this.banners.length)%this.banners.length; this.resetBannerTimer(); } },
                 resetBannerTimer(){ if(this.bannerTimer)clearInterval(this.bannerTimer); this.startSlider(); },
+                // ===== USER BEHAVIOR TRACKING (view=1, wishlist=3, cart=4; orders counted from order history) =====
+                trackActivity(type, product) {
+                    try {
+                        if (!product || !product.id) return;
+                        const pts = { view: 1, wishlist: 3, cart: 4 }[type]; if (!pts) return;
+                        const a = this.userActivity || { products:{}, categories:{} };
+                        let prods = Object.assign({}, a.products); let cats = Object.assign({}, a.categories);
+                        prods[product.id] = (prods[product.id] || 0) + pts;
+                        if (product.category) cats[product.category] = (cats[product.category] || 0) + pts;
+                        const keys = Object.keys(prods);
+                        if (keys.length > 150) { // keep only top 100 products (prevents unlimited growth)
+                            const keep = keys.sort((x, y) => prods[y] - prods[x]).slice(0, 100); const np = {};
+                            keep.forEach(k => { np[k] = prods[k]; }); prods = np;
+                        }
+                        this.userActivity = { products: prods, categories: cats, updated: Date.now() };
+                        localStorage.setItem('sw_activity', JSON.stringify(this.userActivity));
+                        this.scheduleActivitySync();
+                    } catch (e) {}
+                },
+                scheduleActivitySync() {
+                    const uid = this.loggedInUser && this.loggedInUser.uid;
+                    const cu = firebase.auth().currentUser;
+                    if (!uid || !cu || cu.uid !== uid) return;
+                    clearTimeout(this._actTimer);
+                    // one batched write after 15s of quiet, not one write per click
+                    this._actTimer = setTimeout(() => { database.ref('user_activity/' + uid).set(this.userActivity).catch(() => {}); }, 15000);
+                },
                 viewProductDetail(product){
+                    this.trackActivity('view', product);
                     this.selectedProduct = product; this.currentProductImageIndex = 0; this.showSizeChart = false; this.showSizeChartFullscreen = false; this.selectedSize = '';
                     // Track recently viewed
                     this.recentlyViewed = [product, ...this.recentlyViewed.filter(p => p.id !== product.id)].slice(0, 10);
@@ -4348,7 +4524,7 @@ rewardPointsApplied() {
                     this.isBuyNowMode = true;
                     this.selectedPaymentMethod='COD'; this.utrId=''; this.uploadedImageUrl=''; this.uploadError=''; this.showCheckoutModal=true; history.pushState({page:'checkout'}, '');
                 },
-                toggleWishlist(product){ let idx = this.wishlist.findIndex(i=>i.id===product.id); idx>-1? this.wishlist.splice(idx,1):this.wishlist.push(product); localStorage.setItem('sw_wishlist',JSON.stringify(this.wishlist)); this.syncWishlistToCloud(); this.showToast(`${product.name} ${idx>-1?'removed from':'added to'} wishlist`,'info'); },
+                toggleWishlist(product){ let idx = this.wishlist.findIndex(i=>i.id===product.id); idx>-1? this.wishlist.splice(idx,1):this.wishlist.push(product); if(idx===-1) this.trackActivity('wishlist', product); localStorage.setItem('sw_wishlist',JSON.stringify(this.wishlist)); this.syncWishlistToCloud(); this.showToast(`${product.name} ${idx>-1?'removed from':'added to'} wishlist`,'info'); },
                 getCloudUserPath() {
                     if (!this.loggedInUser) return null;
                     if (this.loggedInUser.uid) return 'users_email/' + this.loggedInUser.uid;
@@ -4929,6 +5105,7 @@ async creditDeliveredReferral(order) {
                     if(existing){ existing.quantity+=1; }
                     else { this.cartItems.push({ cartKey, id:product.id, name:product.name + (sizeLabel && sizeLabel!=='Free Size' ? ' ('+sizeLabel+')' : ''), price:finalPrice, weight:weightLabel, image:img, quantity:1, size:sizeLabel, shopkeeperName: product.shopkeeperName || product.shopkeeper || product.sellerName || '', shopkeeperId: product.shopkeeperId || product.sellerId || '' }); }
                     this.showToast(`🛒 ${product.name}${weightLabel ? ' ('+weightLabel+')' : ''}${sizeLabel && sizeLabel!=='Free Size' ? ' ['+sizeLabel+']' : ''} added to cart`, 'cart');
+                    this.trackActivity('cart', product);
                     localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); this.syncCartToCloud();
                 },
                 updateQuantity(item,delta){ let newQty = item.quantity+delta; if(newQty<=0){ this.cartItems = this.cartItems.filter(i=>(i.cartKey||i.id)!==(item.cartKey||item.id)); }else{ item.quantity = newQty; } localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); this.syncCartToCloud(); },
