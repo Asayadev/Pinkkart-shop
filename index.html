@@ -5973,6 +5973,21 @@ if (this.reviewDraft.selectedFile && !this.isVipActive) {
                     if(!cat) return 'fas fa-tag';
                     const c = cat.toLowerCase();
                     if(c.includes('mobile') || c.includes('phone')) return 'fas fa-mobile-alt';
+                    if(c.includes('chicken') || c.includes('mutton') || c.includes('meat')) return 'fas fa-drumstick-bite';
+                    if(c.includes('egg')) return 'fas fa-egg';
+                    if(c.includes('fish')) return 'fas fa-fish';
+                    if(c.includes('fruit')) return 'fas fa-apple-alt';
+                    if(c.includes('herb') || c.includes('green')) return 'fas fa-leaf';
+                    if(c.includes('atta') || c.includes('rice') || c.includes('dal')) return 'fas fa-seedling';
+                    if(c.includes('oil') || c.includes('ghee')) return 'fas fa-oil-can';
+                    if(c.includes('masala') || c.includes('spice')) return 'fas fa-pepper-hot';
+                    if(c.includes('tea') || c.includes('sugar')) return 'fas fa-mug-hot';
+                    if(c.includes('biscuit') || c.includes('snack')) return 'fas fa-cookie-bite';
+                    if(c.includes('drink') || c.includes('juice')) return 'fas fa-glass-whiskey';
+                    if(c.includes('bulb') || c.includes('led') || c.includes('light')) return 'fas fa-lightbulb';
+                    if(c.includes('wire') || c.includes('switch') || c.includes('plug')) return 'fas fa-plug';
+                    if(c.includes('battery') || c.includes('torch')) return 'fas fa-battery-full';
+                    if(c.includes('fast')) return 'fas fa-hamburger';
                     if(c.includes('electronic')) return 'fas fa-laptop';
                     if(c.includes('beauty') || c.includes('cosmetic')) return 'fas fa-magic';
                     if(c.includes('footwear') || c.includes('shoe')) return 'fas fa-shoe-prints';
@@ -6099,6 +6114,20 @@ this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.start
                                 vm.startCashbackListener(userData.phone, firebaseUser.uid);
                                 vm.startVipListeners(userData.phone, firebaseUser.uid);
                                 vm.loadUserCloudData();
+                            } else {
+                                // Profile Firebase me nahi hai (delete ho gaya) -> phone me bacha purana cache saaf karo, naya khaali profile banao
+                                if (vm.emailAuthLoading) return; // Signup/Login chal raha hai: wo apna profile khud banata hai
+                                ['sw_user','sw_cart','sw_wishlist','sw_activity','sw_recently_viewed','sw_avatar_local'].forEach(k => localStorage.removeItem(k));
+                                vm.cartItems = []; vm.wishlist = []; vm.orders = []; vm.recentlyViewed = [];
+                                vm.userActivity = { products:{}, categories:{} };
+                                vm.vipMembership = null; vm.vipMembershipRequest = null; vm.userAvatarUrl = '';
+                                const fresh = { name: firebaseUser.displayName || (firebaseUser.email || 'User').split('@')[0], phone: '', email: firebaseUser.email || '', uid: firebaseUser.uid, rewards: 0, cashback: 0, createdAt: new Date().toISOString() };
+                                await vm.writeEmailProfile(firebaseUser.uid, fresh);
+                                vm.loggedInUser = fresh;
+                                localStorage.setItem('sw_user', JSON.stringify(fresh));
+                                vm.startCashbackListener(fresh.phone, firebaseUser.uid);
+                                vm.startVipListeners(fresh.phone, firebaseUser.uid);
+                                vm.loadMyOrders();
                             }
                         } catch(e) { console.log('Auth state check error:', e); }
                     } else {
