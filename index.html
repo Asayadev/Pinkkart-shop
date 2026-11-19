@@ -653,12 +653,12 @@
                         <div style="display:flex; flex-direction:row; gap:10px; width:max-content;">
                             <div v-for="cat in availableCategories" :key="cat" @click="selectedCategory = cat"
                                  :class="selectedCategory === cat ? 'border-blue-500 bg-blue-50' : 'border-gray-100 bg-white'"
-                                 class="flex flex-col items-center gap-1 px-2.5 pt-2 pb-1.5 rounded-2xl border-2 cursor-pointer transition w-[76px] min-w-[76px] shadow-sm relative">
-                                <div class="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden"
+                                 class="flex flex-col items-center gap-1 px-2.5 pt-2 pb-1.5 rounded-2xl border-2 cursor-pointer transition w-[84px] min-w-[84px] shadow-sm relative">
+                                <div class="w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden"
                                      :class="selectedCategory === cat ? 'bg-blue-100' : 'bg-gray-50'">
-                                    <img v-if="categoryImages[cat]" :src="categoryImages[cat]" class="w-8 h-8 object-contain" :alt="cat" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                                    <i v-if="!categoryImages[cat]" :class="getCategoryIcon(cat)" class="text-lg" :style="selectedCategory === cat ? 'color:#2563eb' : 'color:#94a3b8'"></i>
-                                    <i v-if="categoryImages[cat]" :class="getCategoryIcon(cat)" class="text-lg hidden" :style="selectedCategory === cat ? 'color:#2563eb' : 'color:#94a3b8'"></i>
+                                    <img v-if="categoryImages[cat]" :src="categoryImages[cat]" class="w-full h-full p-1 object-contain" :alt="cat" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                                    <i v-if="!categoryImages[cat]" :class="getCategoryIcon(cat)" class="text-2xl" :style="selectedCategory === cat ? 'color:#2563eb' : 'color:#94a3b8'"></i>
+                                    <i v-if="categoryImages[cat]" :class="getCategoryIcon(cat)" class="text-2xl hidden" :style="selectedCategory === cat ? 'color:#2563eb' : 'color:#94a3b8'"></i>
                                 </div>
                                 <span class="text-[10px] font-bold leading-tight text-center w-full"
                                       style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;"
@@ -5004,6 +5004,12 @@ async creditDeliveredReferral(order) {
                         if(!s.exists()) return database.ref('referral_codes/' + phone).set(uid);
                     }).catch(() => {});
                 },
+                clearLocalUserCache() {
+                    ['sw_user','sw_cart','sw_wishlist','sw_activity','sw_recently_viewed','sw_avatar_local'].forEach(k => localStorage.removeItem(k));
+                    this.cartItems = []; this.wishlist = []; this.orders = []; this.recentlyViewed = [];
+                    this.userActivity = { products:{}, categories:{} };
+                    this.vipMembership = null; this.vipMembershipRequest = null; this.userAvatarUrl = '';
+                },
                 async writeEmailProfile(uid, profile) {
                     await Promise.all(Object.entries(profile).map(([key, value]) =>
                         database.ref(`users_email/${uid}/${key}`).set(value)
@@ -5022,6 +5028,7 @@ async creditDeliveredReferral(order) {
         const snap = await database.ref('users_email/' + uid).once('value');
         let userData = snap.val();
         if(!userData){
+            this.clearLocalUserCache(); // Firebase me profile nahi: phone ka purana cart/wishlist/cache saaf
             userData = { name: cred.user.displayName || (cred.user.email || email).split('@')[0], phone: '', email: cred.user.email || email, uid, createdAt: new Date().toISOString() };
             await this.writeEmailProfile(uid, userData);
         } else if (!userData.uid) {
@@ -6117,10 +6124,7 @@ this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.start
                             } else {
                                 // Profile Firebase me nahi hai (delete ho gaya) -> phone me bacha purana cache saaf karo, naya khaali profile banao
                                 if (vm.emailAuthLoading) return; // Signup/Login chal raha hai: wo apna profile khud banata hai
-                                ['sw_user','sw_cart','sw_wishlist','sw_activity','sw_recently_viewed','sw_avatar_local'].forEach(k => localStorage.removeItem(k));
-                                vm.cartItems = []; vm.wishlist = []; vm.orders = []; vm.recentlyViewed = [];
-                                vm.userActivity = { products:{}, categories:{} };
-                                vm.vipMembership = null; vm.vipMembershipRequest = null; vm.userAvatarUrl = '';
+                                vm.clearLocalUserCache();
                                 const fresh = { name: firebaseUser.displayName || (firebaseUser.email || 'User').split('@')[0], phone: '', email: firebaseUser.email || '', uid: firebaseUser.uid, rewards: 0, cashback: 0, createdAt: new Date().toISOString() };
                                 await vm.writeEmailProfile(firebaseUser.uid, fresh);
                                 vm.loggedInUser = fresh;
