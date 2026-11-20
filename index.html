@@ -3537,6 +3537,7 @@ claimingGift: false,
                 wishlist: [],
                 orders: [],
                 allDeliveredOrders: [],
+                publicLeaderboard: { month: '', list: [] },
                 usersMap: {},
                 banners: [],
                 currentBannerIndex: 0,
@@ -3695,51 +3696,17 @@ if (this.userOrders) {
         // Is mahine ke delivered orders se Top Shoppers calculate karein
                         // 1. Poore month ke sabhi shoppers rank-wise
         allMonthlyShoppers() {
-            const orderList = this.allDeliveredOrders.length ? this.allDeliveredOrders : this.orders;
-            if (!orderList || !orderList.length) return [];
-            
+            // Leaderboard ab admin ke publish kiye hue 'public_leaderboard' se aata hai (sabke orders/users padhne ki zaroorat nahi)
+            const lb = this.publicLeaderboard || {};
             const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth();
-
-            const userSpendMap = {};
-
-            orderList.forEach(o => {
-                if (o.status !== 'delivered' || !o.date) return;
-                
-                const orderDate = new Date(o.date);
-                if (isNaN(orderDate.getTime())) return;
-                
-                if (orderDate.getFullYear() === currentYear && orderDate.getMonth() === currentMonth) {
-                    const phone = String(o.customerPhone || '').replace(/\D/g, '');
-                    const uid = o.uid || phone || 'user';
-                    
-                    if (!userSpendMap[uid]) {
-                        const masked = phone.length >= 10 
-                            ? phone.slice(0, 4) + '****' + phone.slice(-2) 
-                            : 'User';
-
-                        userSpendMap[uid] = {
-                            uid,
-                            phone,
-                            name: (o.customerName || 'Shopper').split(' ')[0],
-                            maskedPhone: masked,
-                            avatarUrl: o.customerAvatar || o.userAvatar || (this.usersMap && this.usersMap[uid] ? this.usersMap[uid].avatarUrl : '') || '',
-                            totalSpent: 0
-                        };
-                    }
-                    userSpendMap[uid].totalSpent += Number(o.total || 0);
-                    // Kisi bhi order me avatar mile to use le lo (sirf pehle order par depend nahi)
-                    if (!userSpendMap[uid].avatarUrl) userSpendMap[uid].avatarUrl = o.customerAvatar || o.userAvatar || '';
-                }
-            });
-
-            // Apna avatar hamesha apni profile photo se
+            const key = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+            if (lb.month !== key || !Array.isArray(lb.list)) return []; // purane mahine ka data nahi dikhana
+            const list = lb.list.map(x => Object.assign({}, x, { totalSpent: Number(x.totalSpent) || 0 }))
+                                .sort((a, b) => b.totalSpent - a.totalSpent);
             const meUid = this.loggedInUser && this.loggedInUser.uid;
-            if (meUid && userSpendMap[meUid] && this.userAvatarUrl) userSpendMap[meUid].avatarUrl = this.userAvatarUrl;
-
-            return Object.values(userSpendMap)
-                .sort((a, b) => b.totalSpent - a.totalSpent);
+            const me = meUid ? list.find(x => x.uid === meUid) : null;
+            if (me && this.userAvatarUrl) me.avatarUrl = this.userAvatarUrl; // apna avatar apni profile se
+            return list;
         },
 
         // 2. Leaderboard display ke liye Top 10
@@ -3750,30 +3717,27 @@ if (this.userOrders) {
         // 3. Logged-in user ka apna rank aur target
         myRankInfo() {
             if (!this.loggedInUser) return null;
-            const myPhone = String(this.loggedInUser.phone || this.loggedInUser.mobile || '').replace(/\D/g, '');
             const myUid = this.loggedInUser.uid;
-
             const list = this.allMonthlyShoppers;
-            const idx = list.findIndex(s => (myUid && s.uid === myUid) || (myPhone && s.phone === myPhone));
+            const idx = list.findIndex(s => myUid && s.uid === myUid);
+
+            // Apna is mahine ka total apne hi orders se (top list me na ho tab bhi sahi dikhe)
+            const now = new Date();
+            const myTotal = (this.orders || []).filter(o => {
+                if (o.status !== 'delivered' || !o.date) return false;
+                const d = new Date(o.date);
+                return !isNaN(d.getTime()) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+            }).reduce((sum, o) => sum + Number(o.total || 0), 0);
 
             if (idx === -1) {
-                return { rank: 'N/A', inTop3: false, totalSpent: 0 };
+                const gap = (list[2] && myTotal > 0) ? Math.max(0, (list[2].totalSpent - myTotal) + 1) : 0;
+                return { rank: 'N/A', inTop3: false, gapToTop3: gap, totalSpent: myTotal };
             }
-
             const rank = idx + 1;
             const inTop3 = rank <= 3;
             let gapToTop3 = 0;
-
-            if (!inTop3 && list[2]) {
-                gapToTop3 = Math.max(0, (list[2].totalSpent - list[idx].totalSpent) + 1);
-            }
-
-            return {
-                rank,
-                inTop3,
-                gapToTop3,
-                totalSpent: list[idx].totalSpent
-            };
+            if (!inTop3 && list[2]) gapToTop3 = Math.max(0, (list[2].totalSpent - list[idx].totalSpent) + 1);
+            return { rank, inTop3, gapToTop3, totalSpent: Math.max(list[idx].totalSpent, myTotal) };
         },
 
         myMonthlySpent() {
@@ -6037,22 +6001,10 @@ if (this.reviewDraft.selectedFile && !this.isVipActive) {
                     });
                 },
                                 loadLeaderboardOrders() {
-                    // 1. Sabhi users ke avatars load karein
-                    database.ref('users_email').on('value', snap => {
-                        this.usersMap = snap.val() || {};
-                    });
-
-                    // 2. Delivered orders load karein
-                    database.ref('orders').on('value', snap => {
-                        const data = snap.val();
-                        if (data) {
-                            this.allDeliveredOrders = Object.keys(data)
-                                .map(k => ({ id: k, ...data[k] }))
-                                .filter(o => o.status === 'delivered');
-                        } else {
-                            this.allDeliveredOrders = [];
-                        }
-                    });
+                    // Safe: sirf admin ka publish kiya hua public_leaderboard padhte hain (users_email / orders nahi)
+                    database.ref('public_leaderboard').on('value', snap => {
+                        this.publicLeaderboard = snap.val() || { month: '', list: [] };
+                    }, () => { this.publicLeaderboard = { month: '', list: [] }; });
                 }
             },
 
