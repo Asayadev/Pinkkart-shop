@@ -536,6 +536,13 @@
                             ₹{{ Number(product.cashback).toFixed(0) }} Cashback
                         </div>
 
+                        <!-- VIP tag: sirf active VIP user ko -->
+                        <div v-if="isVipActive && vipMembership && Number(vipMembership.discountPercent) > 0"
+                             class="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full mb-1.5">
+                            <i class="fas fa-crown text-[9px] text-amber-500"></i>
+                            VIP: Extra {{ Number(vipMembership.discountPercent) }}% Off
+                        </div>
+
                         <div v-if="getProductAvgRating(product.id)" class="flex items-center gap-1.5 mb-2">
                             <span class="rating-pill">{{ getProductAvgRating(product.id) }} <i class="fas fa-star text-[9px]"></i></span>
                             <span class="text-[11px] text-gray-400">{{ getProductReviewCount(product.id) }}</span>
@@ -842,6 +849,13 @@
                                 ₹{{ Number(product.cashback).toFixed(0) }} Cashback
                             </div>
 
+                            <!-- VIP tag: sirf active VIP user ko -->
+                            <div v-if="isVipActive && vipMembership && Number(vipMembership.discountPercent) > 0"
+                                 class="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full mb-1.5">
+                                <i class="fas fa-crown text-[9px] text-amber-500"></i>
+                                VIP: Extra {{ Number(vipMembership.discountPercent) }}% Off
+                            </div>
+
                             <!-- Rating -->
                             <div v-if="getProductAvgRating(product.id)" class="flex items-center gap-1.5">
                                 <span class="rating-pill">{{ getProductAvgRating(product.id) }} <i class="fas fa-star text-[9px]"></i></span>
@@ -1125,6 +1139,13 @@
                                      class="inline-flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-1.5">
                                     <i class="fas fa-coins text-[8px] text-green-500"></i>
                                     ₹{{ Number(product.cashback).toFixed(0) }} Cashback
+                                </div>
+
+                                <!-- VIP tag: sirf active VIP user ko -->
+                                <div v-if="isVipActive && vipMembership && Number(vipMembership.discountPercent) > 0"
+                                     class="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full mb-1.5">
+                                    <i class="fas fa-crown text-[9px] text-amber-500"></i>
+                                    VIP: Extra {{ Number(vipMembership.discountPercent) }}% Off
                                 </div>
                             </div>
                         </div>
@@ -3337,8 +3358,8 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
 
                         <p class="text-xs font-black text-gray-600 uppercase tracking-wide">Available Plans</p>
                         <p v-if="vipPlansError" class="rounded-xl bg-red-50 p-3 text-xs text-red-700">{{ vipPlansError }}</p>
-                        <p v-else-if="!vipPlans.length" class="rounded-xl bg-gray-50 p-4 text-center text-xs text-gray-500">No VIP plans are available yet. Please check back later.</p>
-                        <button v-for="plan in vipPlans" :key="plan.id" @click="vipSelectedPlanId = plan.id" class="w-full rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-4 text-left hover:border-amber-400 hover:shadow-sm transition">
+                        <p v-else-if="!publicVipPlans.length" class="rounded-xl bg-gray-50 p-4 text-center text-xs text-gray-500">No VIP plans are available yet. Please check back later.</p>
+                        <button v-for="plan in publicVipPlans" :key="plan.id" @click="vipSelectedPlanId = plan.id" class="w-full rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-4 text-left hover:border-amber-400 hover:shadow-sm transition">
                             <div class="flex items-start justify-between gap-3">
                                 <div><p class="font-black text-gray-800">{{ plan.name }}</p><p class="mt-1 text-[11px] text-gray-600">{{ plan.durationDays }} days · {{ plan.discount }}% off<span v-if="plan.freeDelivery"> · Free delivery</span></p></div>
                                 <div class="text-right"><p class="text-lg font-black text-amber-700">₹{{ Number(plan.price).toFixed(2) }}</p><span class="text-[10px] font-bold text-amber-600">Select plan <i class="fas fa-chevron-right ml-1"></i></span></div>
@@ -3922,11 +3943,15 @@ rewardPointsApplied() {
                     const expiry = this.vipMembership && Date.parse(this.vipMembership.expiryDate);
                     return !!(this.vipMembership && this.vipMembership.status === 'active' && Number.isFinite(expiry) && expiry > this.membershipNow);
                 },
+                // Milestone-only plans customers ki public list me nahi dikhte (vipPlans me rehte hain taaki milestone claim kaam kare)
+                publicVipPlans() {
+                    return (this.vipPlans || []).filter(plan => !plan.milestoneOnly);
+                },
                 featuredVipPlan() {
-                    return this.vipPlans.length ? this.vipPlans[0] : null;
+                    return this.publicVipPlans.length ? this.publicVipPlans[0] : null;
                 },
                 selectedVipPlan() {
-                    return this.vipPlans.find(plan => plan.id === this.vipSelectedPlanId) || null;
+                    return this.publicVipPlans.find(plan => plan.id === this.vipSelectedPlanId) || null;
                 },
                 cartTotal() { 
                     const items = this.isBuyNowMode && this.buyNowItem ? this.buyNowItem : this.cartItems;
@@ -4090,73 +4115,113 @@ rewardPointsApplied() {
             }
         },
 
+        // Mystery card modal ka "Claim" button ab isi function ko chalata hai
         async claimAndCreateGiftOrder() {
             if (!this.revealedGift || !this.loggedInUser) return;
-            
             this.claimingGift = true;
             try {
-                const wonGift = this.revealedGift;
-                const uid = this.loggedInUser.uid;
                 const level = this.activeMilestoneLevel;
-
-                // Transaction lock taaki double claim na ho sake
-                const claimLock = await database.ref(`users_email/${uid}/claimedMilestones/${level}`)
-                    .transaction(cur => cur ? undefined : { 
-                        claimed: true, 
-                        giftTitle: wonGift.title, 
-                        giftImage: wonGift.image, 
-                        claimedAt: new Date().toISOString() 
-                    });
-
-                if (!claimLock.committed) {
-                    this.showToast('Yeh gift pehle hi claim ho chuka hai.', 'info');
-                    this.showMysteryModal = false;
-                    return;
-                }
-
-                // Delivery ke liye ₹0 Free Gift order create karein
-                const giftOrder = {
-                    customerName: this.loggedInUser.name || 'Customer',
-                    customerPhone: this.loggedInUser.phone || '',
-                    customerAddress: this.userProfile.address || this.loggedInUser.address || 'Address on Profile',
-                    uid: uid,
-                    items: [{
-                        id: 'milestone_gift_' + level,
-                        name: `🎁 Milestone Mystery Reward (Level ${level}): ${wonGift.title}`,
-                        price: 0,
-                        quantity: 1,
-                        image: wonGift.image
-                    }],
-                    itemTotal: 0,
-                    deliveryCharge: 0,
-                    total: 0,
-                    paymentMethod: 'FREE_GIFT',
-                    status: 'pending',
-                    date: new Date().toISOString()
-                };
-
-                await database.ref('orders').push(giftOrder);
-
-                // Local user state update
-                if (!this.loggedInUser.claimedMilestones) this.loggedInUser.claimedMilestones = {};
-                this.loggedInUser.claimedMilestones[level] = {
-                    claimed: true,
-                    giftTitle: wonGift.title,
-                    giftImage: wonGift.image
-                };
-
-                this.showToast(`✅ Badhai ho! "${wonGift.title}" claim ho gaya aur dispatch ke liye order ban gaya!`, 'success');
-                this.showMysteryModal = false;
-                this.loadMyOrders();
-
-            } catch (e) {
-                console.error('Claim gift error:', e);
-                this.showToast('Claim karne me error aaya: ' + e.message, 'error');
+                const data = (this.dynamicMilestones && this.dynamicMilestones[level]) || {};
+                const ok = await this.claimMilestoneReward(level, data, this.revealedGift);
+                if (ok) { this.showMysteryModal = false; this.loadMyOrders(); }
             } finally {
                 this.claimingGift = false;
             }
         },
-      
+
+        // Milestone reward claim: VIP plan (agar admin ne set kiya ho) + gift claim request
+        async claimMilestoneReward(milestoneLevel, milestoneData, wonGift) {
+            const user = this.loggedInUser;
+            const uid = user && user.uid;
+            if (!uid) { this.showToast('Pehle login karein.', 'error'); return false; }
+            milestoneData = milestoneData || {};
+            const level = String(milestoneLevel);
+
+            // 1. Target check: app me milestone "Items" par chalte hain (totalProductsBought).
+            //    Agar aap orders ki ginti par chalana chahte ho to is line me order count likh do.
+            const userProgress = Number(user.totalProductsBought || 0);
+            if (userProgress < Number(level)) { this.showToast('Target poora nahi hua', 'error'); return false; }
+            if (this.isMilestoneClaimed(level)) { this.showToast('Yeh reward pehle hi claim ho chuka hai.', 'info'); return false; }
+
+            // Gift: mystery card se mila gift, nahi to admin ka pehla/legacy gift
+            let gift = wonGift && wonGift.title ? wonGift : null;
+            if (!gift) {
+                const pool = Array.isArray(milestoneData.gifts) ? milestoneData.gifts.filter(g => g && g.title) : [];
+                gift = pool.length ? pool[0] : { title: milestoneData.giftTitle || 'Milestone Gift', image: milestoneData.giftImage || '' };
+            }
+
+            // VIP plan dhoondho (admin ne milestoneVipPlanId set kiya ho to)
+            const planId = milestoneData.milestoneVipPlanId || '';
+            let plan = null;
+            if (planId) {
+                plan = (this.vipPlans || []).find(p => p.id === planId) || null;
+                if (!plan) {
+                    try { const ps = await database.ref('admin_settings/membership_plans/' + planId).once('value'); if (ps.exists()) plan = { id: planId, ...ps.val() }; } catch (e) {}
+                }
+            }
+
+            // 2. Double-claim lock (transaction)
+            const lockRef = database.ref(`users_email/${uid}/claimedMilestones/${level}`);
+            let lock;
+            try {
+                lock = await lockRef.transaction(cur => cur ? undefined : {
+                    claimed: true, giftTitle: gift.title, giftImage: gift.image || '',
+                    vipPlanId: plan ? plan.id : '', claimedAt: new Date().toISOString()
+                });
+            } catch (e) { this.showToast('Claim error: ' + e.message, 'error'); return false; }
+            if (!lock.committed) { this.showToast('Yeh reward pehle hi claim ho chuka hai.', 'info'); return false; }
+
+            // 3. VIP activate (admin ke approveVip jaisa hi membership structure)
+            let membership = null;
+            if (plan) {
+                try {
+                    const now = Date.now();
+                    const days = Number(plan.durationDays || 30);
+                    const existing = this.vipMembership && Date.parse(this.vipMembership.expiryDate) || 0;
+                    membership = {
+                        status: 'active', planId: plan.id, planName: plan.name,
+                        discountPercent: Number(plan.discount || 0),
+                        freeDelivery: plan.freeDelivery !== false,
+                        expiryDate: new Date(Math.max(now, existing) + days * 86400000).toISOString(),
+                        activatedAt: new Date(now).toISOString()
+                    };
+                    await database.ref(`users_email/${uid}/membership`).set(membership);
+                    this.vipMembership = membership;
+                } catch (e) {
+                    console.error('VIP activate error:', e);
+                    try { await lockRef.remove(); } catch (e2) {} // rollback taaki user dobara try kar sake
+                    this.showToast('VIP activate nahi hua, dobara try karein.', 'error');
+                    return false;
+                }
+            }
+
+            // 4. Gift claim request (admin ke liye) + delivery ke liye Rs0 gift order (purana pipeline same rahe)
+            try {
+                const address = (this.userProfile && this.userProfile.address) || user.address || 'Address on Profile';
+                const orderRef = await database.ref('orders').push({
+                    customerName: user.name || 'Customer', customerPhone: user.phone || '', customerAddress: address, uid,
+                    items: [{ id: 'milestone_gift_' + level, name: `🎁 Milestone Reward (Level ${level}): ${gift.title}`, price: 0, quantity: 1, image: gift.image || '' }],
+                    itemTotal: 0, deliveryCharge: 0, total: 0, paymentMethod: 'FREE_GIFT', status: 'pending', date: new Date().toISOString()
+                });
+                await database.ref('gift_claims').push({
+                    uid, customerName: user.name || 'Customer', customerPhone: user.phone || '', customerAddress: address,
+                    milestoneLevel: Number(level), giftTitle: gift.title, giftImage: gift.image || '',
+                    vipPlanId: plan ? plan.id : '', vipPlanName: plan ? plan.name : '',
+                    orderId: orderRef.key, status: 'pending', createdAt: new Date().toISOString()
+                });
+            } catch (e) {
+                console.error('Gift claim save error:', e);
+                this.showToast('VIP mil gaya, par gift request save nahi hui. Support se baat karein.', 'error');
+            }
+
+            // 5. Local state + success
+            if (!user.claimedMilestones) user.claimedMilestones = {};
+            user.claimedMilestones[level] = { claimed: true, giftTitle: gift.title, giftImage: gift.image || '', vipPlanId: plan ? plan.id : '' };
+            try { localStorage.setItem('sw_user', JSON.stringify(user)); } catch (e) {}
+            this.showToast(plan ? 'Badhai ho! VIP Pass aur Gift mil gaya' : `Badhai ho! "${gift.title}" claim ho gaya`, 'success');
+            return true;
+        },
+
         getMilestonePoints(level) {
             const m = this.dynamicMilestones && this.dynamicMilestones[level];
             return m ? Number(m.points || 0) : 0;
@@ -5687,8 +5752,16 @@ if (this.reviewDraft.selectedFile && !this.isVipActive) {
                 getEffectiveOriginal(product) {
                     // If global discount is on, original = product's own (variant-aware) price before discount
                     if (this.globalDiscount > 0) return this.getBasePrice(product);
-                    // Otherwise use stored originalPrice if exists (only meaningful for non-variant products)
-                    return (!product.hasVariants && product.originalPrice) ? Number(product.originalPrice) : null;
+                    // Otherwise stored originalPrice (MRP) use karo
+                    const orig = Number(product.originalPrice), price = Number(product.price);
+                    if (!orig || !price || orig <= price) return null;
+                    if (!product.hasVariants) return orig;
+                    // Variant product: selected variant ka MRP, product ke MRP:price ratio se nikalo (taaki cut-price aur '% off' match karein)
+                    const base = this.getBasePrice(product);
+                    const idx = Number(product.selectedVariantIndex) || 0;
+                    const v = product.variants && product.variants[idx];
+                    if (v && Number(v.originalPrice) > base) return Number(v.originalPrice);
+                    return Math.round(base * orig / price);
                 },
                 getTotalDiscount(product) {
                     const orig = Number(product.originalPrice);
