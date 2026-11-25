@@ -3249,6 +3249,61 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
         </div>
         <!-- ===== END TERMS MODAL ===== -->
 
+<!-- ===== QUICK LIVE BROADCAST / SPLASH POPUP MODAL ===== -->
+<div v-if="showSplashPopup && splash && splash.title"
+     class="fixed inset-0 z-[99990] flex items-center justify-center p-4"
+     style="background:rgba(15,23,42,0.72);backdrop-filter:blur(5px);"
+     @click.self="closeSplashPopup">
+    <div class="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-pink-100 relative"
+         style="animation:pkModalIn 0.35s cubic-bezier(0.34,1.3,0.64,1) both;">
+
+        <!-- Top Close Button -->
+        <button @click="closeSplashPopup"
+                class="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center text-xs transition">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <!-- Optional Banner Image -->
+        <div v-if="splash.imageUrl" class="w-full h-40 bg-pink-50 overflow-hidden">
+            <img :src="getDriveImageUrl(splash.imageUrl)"
+                 :alt="splash.title"
+                 class="w-full h-full object-cover"
+                 onerror="this.parentElement.style.display='none'">
+        </div>
+
+        <!-- Content Body -->
+        <div class="p-5 text-center space-y-3">
+            <span class="inline-flex items-center gap-1 bg-pink-50 text-pink-600 border border-pink-200 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+                <i class="fas fa-bullhorn text-[9px]"></i> Live Announcement
+            </span>
+
+            <h3 class="text-lg font-black text-gray-900 leading-snug">{{ splash.title }}</h3>
+
+            <p v-if="splash.message" class="text-xs text-gray-600 leading-relaxed whitespace-pre-line">
+                {{ splash.message }}
+            </p>
+
+            <!-- Optional Coupon Box -->
+            <div v-if="splash.code" class="bg-amber-50 border border-dashed border-amber-300 rounded-2xl p-3 flex items-center justify-between gap-2">
+                <div class="text-left">
+                    <p class="text-[9px] font-bold uppercase text-amber-700">Promo Code</p>
+                    <p class="text-sm font-black text-amber-900 tracking-wider font-mono">{{ splash.code }}</p>
+                </div>
+                <button @click="applySplashCoupon(splash.code)"
+                        class="bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black px-3 py-1.5 rounded-xl transition active:scale-95">
+                    Use Code
+                </button>
+            </div>
+
+            <button @click="closeSplashPopup"
+                    class="w-full py-3 rounded-2xl font-black text-xs text-white transition active:scale-95 shadow-md shadow-pink-200"
+                    style="background:linear-gradient(135deg,#ec4899 0%,#a855f7 100%);">
+                Theek Hai / Continue 🛍️
+            </button>
+        </div>
+    </div>
+</div>
+
         <!-- ===== PRIVACY POLICY MODAL ===== -->
         <div v-if="showPrivacyModal"
              class="fixed inset-0 z-50 flex items-center justify-center px-4"
@@ -3291,7 +3346,7 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
                             <span class="w-5 h-5 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0">2</span>
                             How We Use Your Data
                         </h4>
-                        <p class="pl-7 text-[12px] leading-relaxed">Your data is used to manage your account, process and deliver orders, send order tracking SMS/emails, and continuously improve our services and experience.</p>
+                        <p class="pl-7 text-[12px] leading-relaxed">Yourdata is used to manage your account, process and deliver orders, send order tracking SMS/emails, and continuously improve our services and experience.</p>
                     </div>
 
                     <div>
@@ -3502,6 +3557,8 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
         new Vue({
             el: '#app',
             data: {
+splash: { isActive: false, title: '', message: '', code: '', imageUrl: '', showUntil: 0, frequency: 'once', version: '' },
+showSplashPopup: false,
 tempRevealedGifts: {},
 showMysteryModal: false,
 activeMilestoneLevel: null,
@@ -4047,6 +4104,99 @@ rewardPointsApplied() {
             },
 
             methods: {
+startSplashListener() {
+    if (this._splashRef) {
+        try { this._splashRef.off(); } catch (e) {}
+    }
+    this._splashRef = database.ref('app_settings/splash');
+    this._splashRef.on('value', snap => {
+        const data = snap.val();
+        if (!data || !data.isActive || !data.title) {
+            this.splash = { isActive: false, title: '', message: '', code: '', imageUrl: '', showUntil: 0, frequency: 'once', version: '' };
+            this.showSplashPopup = false;
+            return;
+        }
+
+        const now = Date.now() + (this.serverOffset || 0);
+        const until = Number(data.showUntil || 0);
+        if (until > 0 && until <= now) {
+            this.showSplashPopup = false;
+            return;
+        }
+
+        this.splash = {
+            isActive: true,
+            title: data.title || '',
+            message: data.message || '',
+            code: data.code || '',
+            imageUrl: data.imageUrl || '',
+            showUntil: until,
+            frequency: data.frequency || 'once',
+            version: String(data.version || data.updatedAt || data.showUntil || data.title)
+        };
+
+        this.evaluateSplashVisibility();
+    }, err => {
+        console.error('Splash listener error:', err);
+    });
+},
+
+evaluateSplashVisibility() {
+    const s = this.splash;
+    if (!s || !s.isActive || !s.title) {
+        this.showSplashPopup = false;
+        return;
+    }
+
+    const freq = s.frequency || 'once';
+    const verKey = encodeURIComponent(s.version);
+
+    if (freq === 'open') {
+        this.showSplashPopup = true;
+        return;
+    }
+
+    if (freq === 'daily') {
+        const today = new Date().toISOString().slice(0, 10);
+        const seenDay = localStorage.getItem('pk_splash_day_' + verKey);
+        this.showSplashPopup = (seenDay !== today);
+        return;
+    }
+
+    // Default: 'once' per version
+    const seenOnce = localStorage.getItem('pk_splash_seen_' + verKey);
+    this.showSplashPopup = !seenOnce;
+},
+
+closeSplashPopup() {
+    const s = this.splash;
+    if (s && s.version) {
+        const verKey = encodeURIComponent(s.version);
+        if (s.frequency === 'daily') {
+            const today = new Date().toISOString().slice(0, 10);
+            localStorage.setItem('pk_splash_day_' + verKey, today);
+        } else if (s.frequency !== 'open') {
+            localStorage.setItem('pk_splash_seen_' + verKey, '1');
+        }
+    }
+    this.showSplashPopup = false;
+},
+
+async applySplashCoupon(code) {
+    const cleanCode = String(code || '').trim().toUpperCase();
+    if (!cleanCode) return;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+            await navigator.clipboard.writeText(cleanCode);
+        } catch (e) {}
+    }
+
+    this.closeSplashPopup();
+    this.showToast(`📋 Coupon "${cleanCode}" copy ho gaya! Cart mein paste karke Apply karein.`, 'info');
+},
+
+
              async openMilestoneReward(level) {
             if (this.currentMilestoneBought < level) {
                 this.showToast(`Is mystery gift ke liye abhi ${level - this.currentMilestoneBought} items aur khareedein!`, 'info');
@@ -6154,6 +6304,7 @@ if (this.reviewDraft.selectedFile && !this.isVipActive) {
                 let savedRV = localStorage.getItem('sw_recently_viewed'); if(savedRV) this.recentlyViewed = JSON.parse(savedRV);
                 // Restore theme
                 if(localStorage.getItem('pk_theme') === 'dark'){ this.isDark = true; document.body.classList.add('dark-mode'); }
+                this.startSplashListener();
                 this.startVipPlanListener();
                 this._vipClockTimer = window.setInterval(() => { this.membershipNow = Date.now(); }, 60000);
                 this.$watch('isVipActive', v => { v ? this.startVipCountdown() : this.stopVipCountdown(); }, { immediate: true });
@@ -6242,18 +6393,28 @@ this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.start
                 }
 
                 // --- LIVE POP-UP ALERT NOTIFICATION ---
-                database.ref("live_alert_prompt").on("value", (snapshot) => {
-                    if (!snapshot.exists()) return;
-                    const data = snapshot.val();
-                    const msgTime = new Date(data.timestamp).getTime();
-                    const rightNow = new Date().getTime();
-                    if (rightNow - msgTime < 60000) {
-                        const alreadyShown = localStorage.getItem("last_seen_offer_time");
-                        if (alreadyShown !== data.timestamp) {
-                            showLiveOfferModal(data.title, data.message, data.code);
-                            localStorage.setItem("last_seen_offer_time", data.timestamp);
-                        }
-                    }
+                database.ref("app_settings/splash").on("value", (snapshot) => {
+                    const d = snapshot.val();
+                    // Admin ne OFF kiya ya data nahi: popup turant band
+                    if (!d || d.isActive !== true) { if (typeof closeLiveOfferModal === 'function' && document.getElementById('liveOfferModal')) closeLiveOfferModal(); return; }
+                    const now = Date.now() + (vm.serverOffset || 0);
+                    if (!(Number(d.showUntil) > now) || !d.title) return;     // samay khatam
+                    const version = String(d.version || d.updatedAt || '');
+                    const freq = d.frequency || 'once';
+                    let seen = {};
+                    try { seen = JSON.parse(localStorage.getItem('pk_splash_seen') || '{}'); } catch (e) {}
+                    const today = new Date().toDateString();
+                    if (freq === 'once' && seen.version === version) return;
+                    if (freq === 'daily' && seen.version === version && seen.day === today) return;
+                    if (freq === 'open' && sessionStorage.getItem('pk_splash_session') === version) return; // is session me dikha chuke
+                    const open = (tries) => {
+                        if (typeof showLiveOfferModal === 'function' && document.getElementById('liveOfferModal')) {
+                            showLiveOfferModal(d.title, d.message, d.code, d.imageUrl, d.showUntil);
+                            localStorage.setItem('pk_splash_seen', JSON.stringify({ version, day: today }));
+                            try { sessionStorage.setItem('pk_splash_session', version); } catch (e) {}
+                        } else if (tries > 0) { setTimeout(() => open(tries - 1), 500); }
+                    };
+                    open(10);
                 });
                 // --- LIVE POP-UP ENDS ---
                 history.replaceState({page:'home'}, '');
@@ -6290,6 +6451,8 @@ this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.start
             <p style="color:rgba(255,255,255,0.85); font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin:0 0 6px;">Special Announcement</p>
             <h2 id="liveOfferTitle" style="color:white; font-size:20px; font-weight:900; margin:0; line-height:1.3; text-shadow:0 2px 8px rgba(0,0,0,0.2);"></h2>
         </div>
+        <!-- Optional poster image -->
+        <img id="liveOfferImage" alt="" style="display:none; width:100%; max-height:200px; object-fit:cover; background:#f3f4f6;" onerror="this.style.display='none'">
         <!-- White body -->
         <div style="background:white; padding:24px;">
             <!-- Message -->
@@ -6305,6 +6468,7 @@ this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.start
                     <button id="liveOfferCopyBtn" onclick="copyLiveOfferCode()" style="background:#ff4b2b; color:white; border:none; border-radius:10px; padding:6px 12px; font-size:12px; font-weight:800; cursor:pointer;">Copy</button>
                 </div>
             </div>
+            <p id="liveOfferEnds" style="display:none; text-align:center; font-size:11px; font-weight:700; color:#9ca3af; margin:-8px 0 14px;"></p>
             <!-- OK Button -->
             <button onclick="closeLiveOfferModal()" style="width:100%; background:linear-gradient(135deg, #ff416c, #ff4b2b); color:white; border:none; border-radius:16px; padding:16px; font-size:15px; font-weight:800; cursor:pointer; letter-spacing:0.5px; box-shadow:0 8px 24px rgba(255,65,108,0.4); transition:transform 0.1s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
                 Got it! 🎉
@@ -6326,7 +6490,7 @@ this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.start
 </style>
 
 <script>
-function showLiveOfferModal(title, message, code) {
+function showLiveOfferModal(title, message, code, imageUrl, endsAt) {
     document.getElementById('liveOfferTitle').textContent = title;
     document.getElementById('liveOfferMessage').textContent = message;
     const codeBox = document.getElementById('liveOfferCodeBox');
@@ -6335,6 +6499,17 @@ function showLiveOfferModal(title, message, code) {
         document.getElementById('liveOfferCode').textContent = cleanCode;
         codeBox.style.display = cleanCode ? 'block' : 'none';
         const btn = document.getElementById('liveOfferCopyBtn'); if (btn) btn.textContent = 'Copy';
+    }
+    const img = document.getElementById('liveOfferImage');
+    if (img) {
+        const ok = /^https?:\/\//i.test(String(imageUrl || ''));
+        if (ok) { img.src = imageUrl; img.style.display = 'block'; } else { img.removeAttribute('src'); img.style.display = 'none'; }
+    }
+    const ends = document.getElementById('liveOfferEnds');
+    if (ends) {
+        const t = Number(endsAt);
+        if (t > 0) { ends.textContent = 'Offer ' + new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' tak'; ends.style.display = 'block'; }
+        else ends.style.display = 'none';
     }
     document.getElementById('liveOfferModal').classList.add('show');
 }
