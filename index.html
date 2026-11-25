@@ -410,7 +410,7 @@
                 <div class="min-w-0 flex-1">
                     <!-- 1. VIP Pass (Sabse Upar) -->
                     <button v-if="loggedInUser" @click="openVipPlans()" class="flex items-center gap-1 text-[11px] font-bold text-amber-700 leading-tight mb-0.5 whitespace-nowrap">
-                         {{ isVipActive ? 'VIP Member' : 'VIP Pass ₹' + (featuredVipPlan ? Number(featuredVipPlan.price).toFixed(0) : '199') }}
+                         {{ isVipActive ? ('VIP · ' + (vipCountdown ? vipCountdown.short + ' left' : 'Member')) : 'VIP Pass ₹' + (featuredVipPlan ? Number(featuredVipPlan.price).toFixed(0) : '199') }}
                         <i class="fas fa-chevron-right text-[8px]"></i>
                     </button>
                     <p v-else class="text-xs text-gray-400 font-medium leading-tight">Welcome </p>
@@ -1918,7 +1918,7 @@
                             <span class="w-5 h-5 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-black">
                                 <i class="fas fa-crown"></i>
                             </span>
-                            <span v-if="isVipActive" class="font-extrabold text-amber-900 text-[11px]">VIP Member Active</span>
+                            <span v-if="isVipActive" class="font-extrabold text-amber-900 text-[11px]">VIP Active · {{ vipCountdown ? vipCountdown.short : '' }} left</span>
                             <span v-else class="font-bold text-gray-600 text-[11px]">Free Shopper</span>
                         </div>
                         <button @click="openVipPlans()" class="text-[10px] font-black text-amber-700 hover:underline flex items-center gap-1">
@@ -3344,6 +3344,14 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
                     <div v-if="isVipActive" class="rounded-2xl border border-amber-200 bg-amber-50 p-3">
                         <p class="text-sm font-black text-amber-900">👑 VIP Member — {{ vipMembership.planName }}</p>
                         <p class="text-xs text-amber-800 mt-1">Expires: {{ formatVipDate(vipMembership.expiryDate) }} · {{ Number(vipMembership.discountPercent || 0) }}% discount<span v-if="vipMembership.freeDelivery"> · Free delivery</span></p>
+                        <div v-if="vipCountdown" class="mt-2">
+                            <div class="flex items-center justify-between text-[11px] font-black" :class="vipCountdown.urgent ? 'text-red-600' : 'text-amber-900'">
+                                <span>⏳ Baaki samay</span>
+                                <span>{{ vipCountdown.d }} din · {{ vipCountdown.hms }}</span>
+                            </div>
+                            <div class="h-1.5 rounded-full bg-amber-100 mt-1 overflow-hidden"><div class="h-full rounded-full transition-all" :class="vipCountdown.urgent ? 'bg-red-500' : 'bg-amber-500'" :style="{ width: vipCountdown.pct + '%' }"></div></div>
+                            <p v-if="vipCountdown.urgent" class="text-[10px] font-bold text-red-600 mt-1">⚠️ VIP jaldi khatam hone wala hai — neeche se renew kar sakte ho</p>
+                        </div>
                     </div>
                     <div v-if="vipMembershipRequest && vipMembershipRequest.status === 'pending'" class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
                         <p class="font-black"><i class="fas fa-clock mr-1"></i>Payment request pending review</p>
@@ -3354,7 +3362,7 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
                         <p class="mt-1">Check the payment details and submit a new request if needed.</p>
                     </div>
 
-<div v-if="!vipSelectedPlanId && !(vipMembershipRequest && vipMembershipRequest.status === 'pending') && !isVipActive" class="space-y-3">
+<div v-if="!vipSelectedPlanId && !(vipMembershipRequest && vipMembershipRequest.status === 'pending') && (!isVipActive || (vipCountdown && vipCountdown.urgent))" class="space-y-3">
 
                         <p class="text-xs font-black text-gray-600 uppercase tracking-wide">Available Plans</p>
                         <p v-if="vipPlansError" class="rounded-xl bg-red-50 p-3 text-xs text-red-700">{{ vipPlansError }}</p>
@@ -3537,6 +3545,7 @@ claimingGift: false,
                 vipMembership: null,
                 vipMembershipRequest: null,
                 membershipNow: Date.now(),
+                vipCountdownNow: Date.now(),
                 showVipPlansModal: false,
                 vipSelectedPlanId: '',
                 vipUtrId: '',
@@ -3942,6 +3951,23 @@ rewardPointsApplied() {
                 isVipActive() {
                     const expiry = this.vipMembership && Date.parse(this.vipMembership.expiryDate);
                     return !!(this.vipMembership && this.vipMembership.status === 'active' && Number.isFinite(expiry) && expiry > this.membershipNow);
+                },
+                vipCountdown() {
+                    if (!this.isVipActive) return null;
+                    const exp = Date.parse(this.vipMembership.expiryDate);
+                    const ms = Math.max(0, exp - this.vipCountdownNow);
+                    const t = Math.floor(ms / 1000);
+                    const d = Math.floor(t / 86400), h = Math.floor((t % 86400) / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+                    const pad = n => String(n).padStart(2, '0');
+                    const start = Date.parse(this.vipMembership.activatedAt);
+                    const total = Number.isFinite(start) && exp > start ? exp - start : 0;
+                    return {
+                        ms, d, h, m, s: sec,
+                        hms: pad(h) + ':' + pad(m) + ':' + pad(sec),
+                        short: d > 0 ? d + 'd ' + h + 'h' : pad(h) + ':' + pad(m) + ':' + pad(sec),
+                        urgent: ms < 3 * 86400000,
+                        pct: total ? Math.max(0, Math.min(100, Math.round(ms / total * 100))) : 100
+                    };
                 },
                 // Milestone-only plans customers ki public list me nahi dikhte (vipPlans me rehte hain taaki milestone claim kaam kare)
                 publicVipPlans() {
@@ -4519,6 +4545,23 @@ rewardPointsApplied() {
                 nextSlide(){ if(this.banners.length){ this.currentBannerIndex=(this.currentBannerIndex+1)%this.banners.length; this.resetBannerTimer(); } },
                 prevSlide(){ if(this.banners.length){ this.currentBannerIndex=(this.currentBannerIndex-1+this.banners.length)%this.banners.length; this.resetBannerTimer(); } },
                 resetBannerTimer(){ if(this.bannerTimer)clearInterval(this.bannerTimer); this.startSlider(); },
+                // ===== VIP PASS COUNTDOWN =====
+                startVipCountdown() {
+                    this.stopVipCountdown();
+                    this._vipLast = 0;
+                    const tick = () => {
+                        const now = Date.now() + (this.serverOffset || 0);
+                        const exp = Date.parse(this.vipMembership && this.vipMembership.expiryDate);
+                        if (!Number.isFinite(exp)) return;
+                        const rem = exp - now;
+                        // Seconds tabhi chalate hain jab 1 din se kam bacha ho ya VIP screen khuli ho; warna har minute
+                        if (rem < 86400000 || this.showVipPlansModal || now - this._vipLast >= 60000) { this.vipCountdownNow = now; this._vipLast = now; }
+                        if (rem <= 0) { this.membershipNow = Date.now(); this.stopVipCountdown(); this.showToast('👑 Aapka VIP Pass khatam ho gaya. Renew karein!', 'info'); }
+                    };
+                    tick();
+                    this._vipTimer = setInterval(tick, 1000);
+                },
+                stopVipCountdown() { if (this._vipTimer) { clearInterval(this._vipTimer); this._vipTimer = null; } },
                 // ===== FLASH SALE =====
                 flashPriceOf(base) { return Math.max(1, Math.round(Number(base) * (100 - Number(this.flashSale.discountPercent)) / 100)); },
                 isFlashProduct(p) { return !!(this.flashSaleActive && p && p.inFlashSale === true); },
@@ -6113,6 +6156,7 @@ if (this.reviewDraft.selectedFile && !this.isVipActive) {
                 if(localStorage.getItem('pk_theme') === 'dark'){ this.isDark = true; document.body.classList.add('dark-mode'); }
                 this.startVipPlanListener();
                 this._vipClockTimer = window.setInterval(() => { this.membershipNow = Date.now(); }, 60000);
+                this.$watch('isVipActive', v => { v ? this.startVipCountdown() : this.stopVipCountdown(); }, { immediate: true });
                 this.loadProducts(); this.loadMyOrders(); this.loadLeaderboardOrders(); this.loadCustomerMilestones();
 this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.startSlider();
 
@@ -6206,7 +6250,7 @@ this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.start
                     if (rightNow - msgTime < 60000) {
                         const alreadyShown = localStorage.getItem("last_seen_offer_time");
                         if (alreadyShown !== data.timestamp) {
-                            showLiveOfferModal(data.title, data.message);
+                            showLiveOfferModal(data.title, data.message, data.code);
                             localStorage.setItem("last_seen_offer_time", data.timestamp);
                         }
                     }
@@ -6253,6 +6297,14 @@ this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.start
                 <p style="font-size:10px; font-weight:700; color:#ff4b2b; letter-spacing:1px; text-transform:uppercase; margin:0 0 6px;">📝 Message</p>
                 <p id="liveOfferMessage" style="font-size:15px; font-weight:600; color:#1f2937; margin:0; line-height:1.5;"></p>
             </div>
+            <!-- Coupon code (agar admin ne diya ho) -->
+            <div id="liveOfferCodeBox" style="display:none; border:2px dashed #ff4b2b; border-radius:16px; padding:12px 14px; margin-bottom:20px; text-align:center; background:#fffaf5;">
+                <p style="font-size:10px; font-weight:700; color:#ff4b2b; letter-spacing:1px; text-transform:uppercase; margin:0 0 6px;">🎟️ Coupon Code</p>
+                <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <span id="liveOfferCode" style="font-size:20px; font-weight:900; color:#1f2937; letter-spacing:2px; font-family:monospace;"></span>
+                    <button id="liveOfferCopyBtn" onclick="copyLiveOfferCode()" style="background:#ff4b2b; color:white; border:none; border-radius:10px; padding:6px 12px; font-size:12px; font-weight:800; cursor:pointer;">Copy</button>
+                </div>
+            </div>
             <!-- OK Button -->
             <button onclick="closeLiveOfferModal()" style="width:100%; background:linear-gradient(135deg, #ff416c, #ff4b2b); color:white; border:none; border-radius:16px; padding:16px; font-size:15px; font-weight:800; cursor:pointer; letter-spacing:0.5px; box-shadow:0 8px 24px rgba(255,65,108,0.4); transition:transform 0.1s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
                 Got it! 🎉
@@ -6274,10 +6326,27 @@ this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.start
 </style>
 
 <script>
-function showLiveOfferModal(title, message) {
+function showLiveOfferModal(title, message, code) {
     document.getElementById('liveOfferTitle').textContent = title;
     document.getElementById('liveOfferMessage').textContent = message;
+    const codeBox = document.getElementById('liveOfferCodeBox');
+    const cleanCode = String(code || '').trim();
+    if (codeBox) {
+        document.getElementById('liveOfferCode').textContent = cleanCode;
+        codeBox.style.display = cleanCode ? 'block' : 'none';
+        const btn = document.getElementById('liveOfferCopyBtn'); if (btn) btn.textContent = 'Copy';
+    }
     document.getElementById('liveOfferModal').classList.add('show');
+}
+function copyLiveOfferCode() {
+    const code = document.getElementById('liveOfferCode').textContent;
+    const btn = document.getElementById('liveOfferCopyBtn');
+    const done = () => { if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 1500); } };
+    const fallback = () => {
+        const t = document.createElement('textarea'); t.value = code; t.style.position = 'fixed'; t.style.opacity = '0';
+        document.body.appendChild(t); t.select(); try { document.execCommand('copy'); done(); } catch (e) {} document.body.removeChild(t);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done).catch(fallback); else fallback();
 }
 function closeLiveOfferModal() {
     document.getElementById('liveOfferModal').classList.remove('show');
