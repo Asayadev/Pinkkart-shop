@@ -3496,7 +3496,7 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
             <p class="text-[11px] font-black uppercase tracking-widest text-amber-300">Level {{ activeMilestoneLevel }} Milestone Unlocked!</p>
             <h3 class="text-base font-black text-white mt-1">Apni Kismat Aazmayein! ✨</h3>
             <p class="text-xs text-gray-300 mt-1" v-if="!revealedGift">Neeche diye gaye <strong>3 Mystery Cards</strong> mein se koi ek card choose karein:</p>
-            <p class="text-xs text-emerald-400 font-bold mt-1" v-else>🎉 Badhai ho! Aapki kismat se yeh gift nikla hai:</p>
+            <p class="text-xs text-emerald-400 font-bold mt-1" v-else>🎉 Aapki kismat se yeh gift nikla hai:</p>
         </div>
 
         <!-- Phase 1: 3 Mystery Cards (Face Down) -->
@@ -4104,6 +4104,18 @@ rewardPointsApplied() {
             },
 
             methods: {
+startMilestonesListener() {
+    if (this._milestonesRef) {
+        try { this._milestonesRef.off(); } catch (e) {}
+    }
+    this._milestonesRef = database.ref('admin_settings/milestones');
+    this._milestonesRef.on('value', snap => {
+        this.dynamicMilestones = snap.exists() ? (snap.val() || {}) : {};
+    }, err => {
+        console.error('Milestones listener error:', err);
+    });
+},
+
 startSplashListener() {
     if (this._splashRef) {
         try { this._splashRef.off(); } catch (e) {}
@@ -4888,8 +4900,15 @@ async applySplashCoupon(code) {
                         const profile = snapshot.val() || {};
                         this.vipMembership = profile.membership || null;
                         this.vipMembershipRequest = profile.vipMembershipRequest || null;
-                        this.loggedInUser = { ...this.loggedInUser, membership: this.vipMembership, vipMembershipRequest: this.vipMembershipRequest };
-                        localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
+                        this.loggedInUser = {
+    ...this.loggedInUser,
+    membership: this.vipMembership,
+    vipMembershipRequest: this.vipMembershipRequest,
+    totalProductsBought: Number(profile.totalProductsBought || 0),
+    claimedMilestones: profile.claimedMilestones || {},
+    revealedMilestones: profile.revealedMilestones || {}
+};
+   localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
                     }, error => {
                         console.error('VIP membership listener error:', error);
                     });
@@ -6305,6 +6324,7 @@ if (this.reviewDraft.selectedFile && !this.isVipActive) {
                 // Restore theme
                 if(localStorage.getItem('pk_theme') === 'dark'){ this.isDark = true; document.body.classList.add('dark-mode'); }
                 this.startSplashListener();
+                this.startMilestonesListener();
                 this.startVipPlanListener();
                 this._vipClockTimer = window.setInterval(() => { this.membershipNow = Date.now(); }, 60000);
                 this.$watch('isVipActive', v => { v ? this.startVipCountdown() : this.stopVipCountdown(); }, { immediate: true });
