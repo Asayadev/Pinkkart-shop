@@ -2175,20 +2175,20 @@
          <!-- ===== GAMING MILESTONE ROADMAP (DYNAMIC SCROLL ROAD) ===== -->
 <div class="bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-4 shadow-xl border border-indigo-500/30 text-white relative overflow-hidden">
     
-       <!-- Top Header Improved -->
-    <div class="flex items-start justify-between gap-2 pb-3 border-b border-indigo-800/60 mb-3">
-        <div class="flex items-center gap-2.5 min-w-0">
-            <span class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center text-sm shadow-md flex-shrink-0">
+         <!-- Top Header Improved -->
+    <div class="flex items-start justify-between gap-1.5 pb-3 border-b border-indigo-800/60 mb-3">
+        <div class="flex items-center gap-2 min-w-0 flex-1">
+            <span class="w-8 h-8 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center text-xs shadow-md flex-shrink-0">
                 🎁
             </span>
             <div class="min-w-0">
-                <p class="text-xs font-black uppercase tracking-wider text-pink-300 truncate">Milestone Treasure Road</p>
-                <p class="text-[10px] text-gray-300 font-medium truncate">Orders karein aur real gifts unlock karein!</p>
+                <p class="text-[10px] sm:text-xs font-black uppercase tracking-wide text-pink-300 leading-tight">Milestone Treasure Road</p>
+                <p class="text-[9px] text-gray-300 font-medium leading-snug mt-0.5">Orders karein aur real gifts unlock karein!</p>
             </div>
         </div>
-        <div class="flex-shrink-0 bg-indigo-900/80 border border-indigo-400/40 text-amber-300 px-3 py-1 rounded-xl text-center shadow-inner">
-            <p class="text-[9px] uppercase tracking-wider opacity-75 font-bold">Progress</p>
-            <p class="text-xs font-black">{{ currentMilestoneBought }} Items</p>
+        <div class="flex-shrink-0 bg-indigo-900/80 border border-indigo-400/40 text-amber-300 px-2 py-1 rounded-xl text-center shadow-inner">
+            <p class="text-[8px] uppercase tracking-wider opacity-75 font-bold">Progress</p>
+            <p class="text-[11px] font-black leading-tight">{{ currentMilestoneBought }} Items</p>
         </div>
     </div>
 
@@ -4030,25 +4030,53 @@ rewardPointsApplied() {
                 activeMilestoneLevels() {
                     return Object.keys(this.dynamicMilestones).map(Number).sort((a,b)=>a-b);
                 },
+
                 dynamicRoadProgress() {
     const levels = this.activeMilestoneLevels;
     if (!levels.length) return 0;
-    const count = this.currentMilestoneBought;
+
+    const count = Number(this.currentMilestoneBought || 0);
     const maxLevel = levels[levels.length - 1];
     if (count >= maxLevel) return 100;
+    if (count <= 0) return 0;
 
-    const nextTarget = levels.find(l => l > count);
-    if (!nextTarget) return 100;
+    // 1. Pehle count karo ki kitne milestones unlock ho chuke hain
+    let unlockedCount = 0;
+    let prevTarget = 0;
+    let nextTarget = levels[0];
 
-    const prevTarget = levels.filter(l => l <= count).pop() || 0;
-    const span = Math.max(1, nextTarget - prevTarget);
-    const stepBase = (levels.indexOf(nextTarget) / levels.length) * 100;
-    const stepShare = (1 / levels.length) * 100;
-    const withinStep = Math.min(1, Math.max(0, (count - prevTarget) / span));
+    for (let i = 0; i < levels.length; i++) {
+        if (count >= levels[i]) {
+            unlockedCount = i + 1;
+            prevTarget = levels[i];
+        } else {
+            nextTarget = levels[i];
+            break;
+        }
+    }
 
-    return Math.min(100, Math.round(stepBase + withinStep * stepShare));
+    // 2. Har card slot ki visual position (card width 96px + gap 12px = 108px)
+    const cardStep = 108;
+    const cardCenterOffset = 48;
+    const totalTrackWidth = Math.max(1, levels.length * cardStep);
+
+    // Unlocked level ke center tak ka px
+    const basePx = unlockedCount > 0
+        ? ((unlockedCount - 1) * cardStep + cardCenterOffset)
+        : 0;
+
+    // Next level ke center tak ka px
+    const nextIdx = Math.min(levels.length - 1, unlockedCount);
+    const nextPx = nextIdx * cardStep + cardCenterOffset;
+
+    const spanItems = Math.max(1, nextTarget - prevTarget);
+    const ratio = Math.min(1, Math.max(0, (count - prevTarget) / spanItems));
+
+    const currentPx = basePx + (nextPx - basePx) * ratio;
+    const pct = (currentPx / totalTrackWidth) * 100;
+
+    return Math.min(100, Math.max(0, Math.round(pct)));
 },
-
                 // Latest non-delivered/non-rejected active order
                 activeOrder() {
                     if (!this.orders || !this.orders.length) return null;
