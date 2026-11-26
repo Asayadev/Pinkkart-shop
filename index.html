@@ -2308,6 +2308,21 @@
                         <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
                     </button>
 
+                    <button @click="openVehicleBooking()"
+                            class="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 transition active:scale-98">
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs">
+                                <i class="fas fa-car-side"></i>
+                            </span>
+                            <span class="text-xs font-bold text-gray-800">Vehicle Booking <span class="text-[9px] font-medium text-gray-400">(Bike · Auto · Tractor)</span></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span v-if="!isVipActive" class="text-[9px] bg-amber-100 text-amber-700 font-black px-2 py-0.5 rounded-full"><i class="fas fa-crown text-[8px]"></i> VIP</span>
+                            <span v-else-if="vehicleActiveCount" class="text-[10px] bg-green-100 text-green-700 font-black px-2 py-0.2 rounded-full">{{ vehicleActiveCount }}</span>
+                            <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
+                        </div>
+                    </button>
+
                     <button @click="activeTab='wishlist'; history.pushState({page:'tab'},'')"
                             class="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 transition active:scale-98">
                         <div class="flex items-center gap-3">
@@ -3265,6 +3280,123 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
         </div>
         <!-- ===== END TERMS MODAL ===== -->
 
+<!-- ===== VEHICLE BOOKING MODAL ===== -->
+<div v-if="showVehicleModal" class="fixed inset-0 z-[99980] flex items-end justify-center" style="background:rgba(15,23,42,0.6);" @click.self="showVehicleModal = false">
+    <div class="bg-white w-full max-w-md rounded-t-3xl max-h-[92vh] flex flex-col shadow-2xl">
+        <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100">
+            <div>
+                <h3 class="text-base font-black text-gray-900"><i class="fas fa-car-side text-amber-500 mr-2"></i>Vehicle Booking</h3>
+                <p class="text-[11px] text-gray-400">Bike · Auto Rickshaw · Tractor</p>
+            </div>
+            <button @click="showVehicleModal = false" class="w-9 h-9 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="overflow-y-auto p-5 space-y-4 pb-8">
+            <!-- VIP lock -->
+            <div v-if="!isVipActive" class="text-center py-6 space-y-3">
+                <div class="w-16 h-16 mx-auto rounded-full bg-amber-100 flex items-center justify-center"><i class="fas fa-crown text-amber-500 text-2xl"></i></div>
+                <p class="text-sm font-black text-gray-800">Ye facility sirf VIP members ke liye hai</p>
+                <p class="text-xs text-gray-500">VIP Pass lekar Bike, Auto aur Tractor booking karein.</p>
+                <button @click="showVehicleModal = false; openVipPlans()" class="px-6 py-3 rounded-2xl text-white text-xs font-black shadow-md active:scale-95" style="background:linear-gradient(135deg,#f59e0b,#ea580c);">👑 VIP Pass lein</button>
+            </div>
+
+            <template v-else>
+                <div class="flex gap-2">
+                    <button @click="vehicleTab = 'book'" :class="vehicleTab === 'book' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-2 rounded-xl text-xs font-black">🚖 Naya Booking</button>
+                    <button @click="vehicleTab = 'my'" :class="vehicleTab === 'my' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-2 rounded-xl text-xs font-black">📋 Meri Bookings ({{ vehicleBookings.length }})</button>
+                </div>
+
+                <!-- BOOK FORM -->
+                <div v-if="vehicleTab === 'book'" class="space-y-3">
+                    <div class="bg-gray-50 rounded-2xl p-3 text-xs space-y-1 border border-gray-100">
+                        <p><i class="fas fa-user w-4 text-gray-400"></i> <b>{{ loggedInUser.name }}</b></p>
+                        <p><i class="fas fa-phone w-4 text-gray-400"></i> {{ loggedInUser.phone || 'Mobile number add nahi hai' }}</p>
+                        <p><i class="fas fa-map-marker-alt w-4 text-gray-400"></i> {{ userProfile.address || loggedInUser.address || 'Address add nahi hai' }}</p>
+                    </div>
+                    <p v-if="!vehicleLocations.length" class="text-xs text-center text-gray-400 bg-gray-50 rounded-2xl p-4">Abhi koi gaon/jagah set nahi hui hai. Thodi der baad try karein.</p>
+                    <template v-else>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-black text-gray-500 uppercase mb-1">Kahan se</label>
+                                <select v-model="vehicleForm.from" class="w-full px-3 py-2.5 border rounded-xl text-xs bg-white outline-none focus:border-amber-400">
+                                    <option value="" disabled>Select karein</option>
+                                    <option v-for="l in vehicleLocations" :key="'f'+l" :value="l">{{ l }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-gray-500 uppercase mb-1">Kahan tak</label>
+                                <select v-model="vehicleForm.to" class="w-full px-3 py-2.5 border rounded-xl text-xs bg-white outline-none focus:border-amber-400">
+                                    <option value="" disabled>Select karein</option>
+                                    <option v-for="l in vehicleToOptions" :key="'t'+l" :value="l">{{ l }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-500 uppercase mb-1">Gaadi ka type</label>
+                            <select v-model="vehicleForm.vehicleType" class="w-full px-3 py-2.5 border rounded-xl text-xs bg-white outline-none focus:border-amber-400">
+                                <option v-for="t in vehicleTypes" :key="t.id" :value="t.id">{{ t.label }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-500 uppercase mb-1">Kis kaam ke liye</label>
+                            <input type="text" v-model="vehicleForm.purpose" maxlength="120" placeholder="jaise: bazaar, hospital, saman, kheti ka kaam" class="w-full px-3 py-2.5 border rounded-xl text-xs outline-none focus:border-amber-400">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-black text-gray-500 uppercase mb-1">Passenger (max {{ vehicleMaxPassengers }})</label>
+                                <input type="number" v-model.number="vehicleForm.passengers" min="1" :max="vehicleMaxPassengers" class="w-full px-3 py-2.5 border rounded-xl text-xs outline-none focus:border-amber-400">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-gray-500 uppercase mb-1">Kilometre</label>
+                                <input type="number" v-model.number="vehicleForm.km" min="1" max="200" placeholder="jaise: 12" class="w-full px-3 py-2.5 border rounded-xl text-xs outline-none focus:border-amber-400">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-500 uppercase mb-1">Note (optional)</label>
+                            <textarea v-model="vehicleForm.note" rows="2" maxlength="200" placeholder="Samay ya koi khaas baat" class="w-full px-3 py-2.5 border rounded-xl text-xs outline-none resize-none focus:border-amber-400"></textarea>
+                        </div>
+                        <button @click="submitVehicleBooking" :disabled="vehicleSubmitting" class="w-full py-3.5 rounded-2xl text-white text-sm font-black shadow-md active:scale-95 disabled:opacity-60" style="background:linear-gradient(135deg,#f59e0b,#ea580c);">
+                            <i v-if="vehicleSubmitting" class="fas fa-circle-notch fa-spin mr-1"></i>🚖 Booking Request Bhejein
+                        </button>
+                        <p class="text-[10px] text-gray-400 text-center">Admin aapka route aur kilometre dekhkar price batayega. Aap accept karoge tabhi driver assign hoga.</p>
+                    </template>
+                </div>
+
+                <!-- MY BOOKINGS -->
+                <div v-else class="space-y-3">
+                    <p v-if="!vehicleBookings.length" class="text-xs text-center text-gray-400 bg-gray-50 rounded-2xl p-6">Abhi koi booking nahi hai.</p>
+                    <div v-for="b in vehicleBookings" :key="b.id" class="border border-gray-100 rounded-2xl p-3.5 space-y-2.5 shadow-xs">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <p class="text-xs font-black text-gray-800">{{ vehicleLabel(b.vehicleType) }}</p>
+                                <p class="text-[11px] text-gray-600 mt-0.5">{{ b.from }} → {{ b.to }}</p>
+                                <p class="text-[10px] text-gray-400">{{ b.km }} km · {{ b.passengers }} passenger · {{ b.purpose }}</p>
+                            </div>
+                            <span :class="vehicleStatusInfo(b.status).c" class="px-2 py-1 rounded-full text-[9px] font-black text-center leading-tight max-w-[120px]">{{ vehicleStatusInfo(b.status).t }}</span>
+                        </div>
+                        <div v-if="b.fare" class="bg-amber-50 rounded-xl px-3 py-2 flex items-center justify-between">
+                            <span class="text-[11px] font-bold text-amber-800">Booking Price</span>
+                            <span class="text-base font-black text-amber-900">₹{{ b.fare }}</span>
+                        </div>
+                        <p v-if="b.quoteNote" class="text-[10px] text-gray-500">📝 {{ b.quoteNote }}</p>
+                        <div v-if="b.status === 'confirmed' && b.driver" class="bg-green-50 border border-green-200 rounded-xl p-3 text-xs space-y-1">
+                            <p class="font-black text-green-800">🚖 Aapka Driver</p>
+                            <p><i class="fas fa-user w-4 text-green-600"></i> {{ b.driver.name }}</p>
+                            <p><i class="fas fa-phone w-4 text-green-600"></i> <a :href="'tel:' + String(b.driver.phone || '').replace(/[^0-9+]/g, '')" class="font-black text-blue-600">{{ b.driver.phone }}</a></p>
+                            <p v-if="b.driver.vehicleNo"><i class="fas fa-car w-4 text-green-600"></i> {{ b.driver.vehicleNo }}<span v-if="b.driver.vehicleModel"> · {{ b.driver.vehicleModel }}</span></p>
+                            <p v-if="b.driver.etaMinutes"><i class="fas fa-clock w-4 text-green-600"></i> Lagbhag <b>{{ b.driver.etaMinutes }} minute</b> mein pahunchega</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button v-if="b.status === 'quoted'" @click="acceptVehicleQuote(b)" class="flex-1 bg-green-600 text-white py-2 rounded-xl text-xs font-black active:scale-95">✅ Price Accept</button>
+                            <button v-if="['pending','quoted','accepted'].includes(b.status)" @click="cancelVehicleBooking(b)" class="px-4 py-2 rounded-xl bg-red-50 text-red-600 text-xs font-black active:scale-95">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
 <!-- ===== QUICK LIVE BROADCAST / SPLASH POPUP MODAL ===== -->
 <div v-if="showSplashPopup && splash && splash.title"
      class="fixed inset-0 z-[99990] flex items-center justify-center p-4"
@@ -3575,6 +3707,9 @@ border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;
             data: {
 splash: { isActive: false, title: '', message: '', code: '', imageUrl: '', showUntil: 0, frequency: 'once', version: '' },
 showSplashPopup: false,
+showVehicleModal: false, vehicleTab: 'book', vehicleLocations: [], vehicleBookings: [], vehicleSubmitting: false,
+vehicleForm: { from: '', to: '', vehicleType: 'bike', purpose: '', passengers: 1, km: '', note: '' },
+vehicleTypes: [{ id: 'bike', label: '🏍️ Bike', max: 2 }, { id: 'auto', label: '🛺 Auto Rickshaw', max: 6 }, { id: 'tractor', label: '🚜 Tractor', max: 20 }],
 tempRevealedGifts: {},
 showMysteryModal: false,
 activeMilestoneLevel: null,
@@ -3954,6 +4089,9 @@ rewardPointsApplied() {
                     return { d: Math.floor(t / 86400), h: pad(Math.floor((t % 86400) / 3600)), m: pad(Math.floor((t % 3600) / 60)), s: pad(t % 60) };
                 },
                 flashProducts() { return this.flashSaleActive ? this.recInStock.filter(p => p.inFlashSale === true).slice(0, 10) : []; },
+                vehicleActiveCount() { return (this.vehicleBookings || []).filter(b => ['quoted', 'accepted', 'confirmed'].includes(b.status)).length; },
+                vehicleToOptions() { return (this.vehicleLocations || []).filter(l => l !== this.vehicleForm.from); },
+                vehicleMaxPassengers() { const t = this.vehicleTypes.find(x => x.id === this.vehicleForm.vehicleType); return t ? t.max : 1; },
                 sponsoredProducts() {
                     const now = this.membershipNow || Date.now();
                     const seed = this.sponsorSeed || 0.5;
@@ -4729,6 +4867,93 @@ async applySplashCoupon(code) {
                 nextSlide(){ if(this.banners.length){ this.currentBannerIndex=(this.currentBannerIndex+1)%this.banners.length; this.resetBannerTimer(); } },
                 prevSlide(){ if(this.banners.length){ this.currentBannerIndex=(this.currentBannerIndex-1+this.banners.length)%this.banners.length; this.resetBannerTimer(); } },
                 resetBannerTimer(){ if(this.bannerTimer)clearInterval(this.bannerTimer); this.startSlider(); },
+                // ===== VEHICLE BOOKING (VIP only) =====
+                startVehicleListeners() {
+                    try {
+                        database.ref('app_settings/vehicle_locations').on('value', snap => {
+                            const v = snap.val();
+                            this.vehicleLocations = Array.isArray(v) ? v.filter(Boolean) : (v ? Object.values(v).filter(Boolean) : []);
+                        }, () => { this.vehicleLocations = []; });
+                    } catch (e) {}
+                },
+                loadMyVehicleBookings() {
+                    const uid = this.loggedInUser && this.loggedInUser.uid;
+                    const authUid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
+                    if (this._vbRef) { try { this._vbRef.off(); } catch (e) {} this._vbRef = null; }
+                    if (!uid || uid !== authUid) { this.vehicleBookings = []; return; }
+                    this._vbPrev = this._vbPrev || {};
+                    this._vbRef = database.ref('vehicle_bookings').orderByChild('uid').equalTo(uid);
+                    this._vbRef.on('value', snap => {
+                        const d = snap.val() || {};
+                        const list = Object.keys(d).map(id => ({ id, ...d[id] })).sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
+                        list.forEach(b => {
+                            const old = this._vbPrev[b.id];
+                            if (old && old !== b.status) {
+                                if (b.status === 'quoted') this.showToast('💰 Booking ka price aa gaya: ₹' + b.fare + '. Accept karein.', 'success');
+                                else if (b.status === 'confirmed') this.showToast('🚖 Driver assign ho gaya! Details dekhein.', 'success');
+                                else if (b.status === 'cancelled' && b.cancelledBy === 'admin') this.showToast('Booking admin ne cancel kar di.', 'error');
+                                else if (b.status === 'completed') this.showToast('✅ Trip complete. Shukriya!', 'success');
+                            }
+                            this._vbPrev[b.id] = b.status;
+                        });
+                        this.vehicleBookings = list;
+                    }, () => { this.vehicleBookings = []; });
+                },
+                openVehicleBooking() {
+                    if (!this.loggedInUser) { this.showToast('Pehle login karein.', 'error'); this.showLoginModal = true; return; }
+                    this.vehicleTab = 'book';
+                    this.showVehicleModal = true;
+                },
+                vehicleStatusInfo(st) {
+                    return ({
+                        pending:   { t: '⏳ Admin price dekh raha hai', c: 'bg-yellow-100 text-yellow-700' },
+                        quoted:    { t: '💰 Price aa gaya', c: 'bg-blue-100 text-blue-700' },
+                        accepted:  { t: '✅ Accepted — driver dhundh rahe hain', c: 'bg-indigo-100 text-indigo-700' },
+                        confirmed: { t: '🚖 Driver confirm', c: 'bg-green-100 text-green-700' },
+                        completed: { t: '🏁 Trip complete', c: 'bg-gray-100 text-gray-700' },
+                        cancelled: { t: '❌ Cancelled', c: 'bg-red-100 text-red-600' }
+                    })[st] || { t: st, c: 'bg-gray-100 text-gray-600' };
+                },
+                vehicleLabel(id) { const t = this.vehicleTypes.find(x => x.id === id); return t ? t.label : id; },
+                async submitVehicleBooking() {
+                    const u = this.loggedInUser; const f = this.vehicleForm;
+                    if (!u || !u.uid) { this.showToast('Pehle login karein.', 'error'); return; }
+                    if (!this.isVipActive) { this.showToast('Ye facility sirf VIP members ke liye hai.', 'error'); return; }
+                    const address = (this.userProfile && this.userProfile.address) || u.address || '';
+                    if (!u.phone) { this.showToast('Pehle Profile mein mobile number add karein.', 'error'); return; }
+                    if (!address) { this.showToast('Pehle Profile mein apna address add karein.', 'error'); return; }
+                    if (!f.from || !f.to) { this.showToast('Kahan se aur kahan tak, dono chunein.', 'error'); return; }
+                    if (f.from === f.to) { this.showToast('From aur To alag hone chahiye.', 'error'); return; }
+                    if (!String(f.purpose).trim()) { this.showToast('Kis kaam ke liye, ye likhein.', 'error'); return; }
+                    const pax = Math.floor(Number(f.passengers)); const km = Number(f.km);
+                    if (!(pax >= 1 && pax <= this.vehicleMaxPassengers)) { this.showToast('Is gaadi mein 1 se ' + this.vehicleMaxPassengers + ' passenger hi baith sakte hain.', 'error'); return; }
+                    if (!(km > 0 && km <= 200)) { this.showToast('Kilometre 1 se 200 ke beech likhein.', 'error'); return; }
+                    this.vehicleSubmitting = true;
+                    try {
+                        const now = new Date().toISOString();
+                        await database.ref('vehicle_bookings').push({
+                            uid: u.uid, customerName: u.name || 'Customer', customerPhone: u.phone, customerAddress: address,
+                            vehicleType: f.vehicleType, from: f.from, to: f.to, purpose: String(f.purpose).trim().slice(0, 120),
+                            passengers: pax, km: km, note: String(f.note || '').trim().slice(0, 200),
+                            status: 'pending', createdAt: now, updatedAt: now
+                        });
+                        this.showToast('🚖 Booking request bhej di! Admin price batayega.', 'success');
+                        this.vehicleForm = { from: '', to: '', vehicleType: 'bike', purpose: '', passengers: 1, km: '', note: '' };
+                        this.vehicleTab = 'my';
+                    } catch (e) {
+                        console.error('Vehicle booking error:', e);
+                        this.showToast('Booking save nahi hui. Dobara try karein.', 'error');
+                    } finally { this.vehicleSubmitting = false; }
+                },
+                async acceptVehicleQuote(b) {
+                    try { await database.ref('vehicle_bookings/' + b.id + '/status').set('accepted'); this.showToast('✅ Price accept ho gaya. Ab driver assign hoga.', 'success'); }
+                    catch (e) { this.showToast('Accept nahi hua. Dobara try karein.', 'error'); }
+                },
+                async cancelVehicleBooking(b) {
+                    if (!confirm('Is booking ko cancel karna hai?')) return;
+                    try { await database.ref('vehicle_bookings/' + b.id + '/status').set('cancelled'); this.showToast('Booking cancel ho gayi.', 'info'); }
+                    catch (e) { this.showToast('Cancel nahi hua. Dobara try karein.', 'error'); }
+                },
                 // ===== VIP PASS COUNTDOWN =====
                 startVipCountdown() {
                     this.stopVipCountdown();
@@ -5269,7 +5494,7 @@ async creditDeliveredReferral(order) {
                 },
                 clearLocalUserCache() {
                     ['sw_user','sw_cart','sw_wishlist','sw_activity','sw_recently_viewed','sw_avatar_local'].forEach(k => localStorage.removeItem(k));
-                    this.cartItems = []; this.wishlist = []; this.orders = []; this.recentlyViewed = [];
+                    this.cartItems = []; this.wishlist = []; this.orders = []; this.recentlyViewed = []; this.vehicleBookings = [];
                     this.userActivity = { products:{}, categories:{} };
                     this.vipMembership = null; this.vipMembershipRequest = null; this.userAvatarUrl = '';
                 },
@@ -6022,6 +6247,7 @@ if (this.reviewDraft.selectedFile && !this.isVipActive) {
                 },
                 loadProducts(){ database.ref('products').on('value',(snapshot)=>{ let data=snapshot.val(); if(data){ this.products=Object.keys(data).map(key=>({ id:key, ...data[key], selectedVariantIndex: 0 })); } else if(!this.products.length){ this.products=[]; } this.$nextTick(()=>this.loadSuggestions()); }); },
                 loadMyOrders(){
+                    this.loadMyVehicleBookings();
                     const uid = this.loggedInUser && this.loggedInUser.uid;
                     const authenticatedUid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
                     if (this._myOrdersRef) { try { this._myOrdersRef.off(); } catch(e){} this._myOrdersRef = null; }
@@ -6346,6 +6572,7 @@ if (this.reviewDraft.selectedFile && !this.isVipActive) {
                 // Restore theme
                 if(localStorage.getItem('pk_theme') === 'dark'){ this.isDark = true; document.body.classList.add('dark-mode'); }
                 this.startSplashListener();
+                this.startVehicleListeners();
                 this.startMilestonesListener();
                 this.startVipPlanListener();
                 this._vipClockTimer = window.setInterval(() => { this.membershipNow = Date.now(); }, 60000);
@@ -6435,29 +6662,6 @@ this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.start
                 }
 
                 // --- LIVE POP-UP ALERT NOTIFICATION ---
-                database.ref("app_settings/splash").on("value", (snapshot) => {
-                    const d = snapshot.val();
-                    // Admin ne OFF kiya ya data nahi: popup turant band
-                    if (!d || d.isActive !== true) { if (typeof closeLiveOfferModal === 'function' && document.getElementById('liveOfferModal')) closeLiveOfferModal(); return; }
-                    const now = Date.now() + (vm.serverOffset || 0);
-                    if (!(Number(d.showUntil) > now) || !d.title) return;     // samay khatam
-                    const version = String(d.version || d.updatedAt || '');
-                    const freq = d.frequency || 'once';
-                    let seen = {};
-                    try { seen = JSON.parse(localStorage.getItem('pk_splash_seen') || '{}'); } catch (e) {}
-                    const today = new Date().toDateString();
-                    if (freq === 'once' && seen.version === version) return;
-                    if (freq === 'daily' && seen.version === version && seen.day === today) return;
-                    if (freq === 'open' && sessionStorage.getItem('pk_splash_session') === version) return; // is session me dikha chuke
-                    const open = (tries) => {
-                        if (typeof showLiveOfferModal === 'function' && document.getElementById('liveOfferModal')) {
-                            showLiveOfferModal(d.title, d.message, d.code, d.imageUrl, d.showUntil);
-                            localStorage.setItem('pk_splash_seen', JSON.stringify({ version, day: today }));
-                            try { sessionStorage.setItem('pk_splash_session', version); } catch (e) {}
-                        } else if (tries > 0) { setTimeout(() => open(tries - 1), 500); }
-                    };
-                    open(10);
-                });
                 // --- LIVE POP-UP ENDS ---
                 history.replaceState({page:'home'}, '');
                 history.pushState({page:'app'}, '');
