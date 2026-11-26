@@ -4568,29 +4568,7 @@ async applySplashCoupon(code) {
             } catch (e) { this.showToast('Claim error: ' + e.message, 'error'); return false; }
             if (!lock.committed) { this.showToast('Yeh reward pehle hi claim ho chuka hai.', 'info'); return false; }
 
-            // 3. VIP activate (admin ke approveVip jaisa hi membership structure)
-            let membership = null;
-            if (plan) {
-                try {
-                    const now = Date.now();
-                    const days = Number(plan.durationDays || 30);
-                    const existing = this.vipMembership && Date.parse(this.vipMembership.expiryDate) || 0;
-                    membership = {
-                        status: 'active', planId: plan.id, planName: plan.name,
-                        discountPercent: Number(plan.discount || 0),
-                        freeDelivery: plan.freeDelivery !== false,
-                        expiryDate: new Date(Math.max(now, existing) + days * 86400000).toISOString(),
-                        activatedAt: new Date(now).toISOString()
-                    };
-                    await database.ref(`users_email/${uid}/membership`).set(membership);
-                    this.vipMembership = membership;
-                } catch (e) {
-                    console.error('VIP activate error:', e);
-                    try { await lockRef.remove(); } catch (e2) {} // rollback taaki user dobara try kar sake
-                    this.showToast('VIP activate nahi hua, dobara try karein.', 'error');
-                    return false;
-                }
-            }
+            // 3. VIP ab admin chalu karta hai (membership ko user nahi badal sakta) - request gift_claims me jaati hai
 
             // 4. Gift claim request (admin ke liye) + delivery ke liye Rs0 gift order (purana pipeline same rahe)
             try {
@@ -4603,7 +4581,7 @@ async applySplashCoupon(code) {
                 await database.ref('gift_claims').push({
                     uid, customerName: user.name || 'Customer', customerPhone: user.phone || '', customerAddress: address,
                     milestoneLevel: Number(level), giftTitle: gift.title, giftImage: gift.image || '',
-                    vipPlanId: plan ? plan.id : '', vipPlanName: plan ? plan.name : '',
+                    vipPlanId: plan ? plan.id : '', vipPlanName: plan ? plan.name : '', vipActivated: false,
                     orderId: orderRef.key, status: 'pending', createdAt: new Date().toISOString()
                 });
             } catch (e) {
@@ -4615,7 +4593,7 @@ async applySplashCoupon(code) {
             if (!user.claimedMilestones) user.claimedMilestones = {};
             user.claimedMilestones[level] = { claimed: true, giftTitle: gift.title, giftImage: gift.image || '', vipPlanId: plan ? plan.id : '' };
             try { localStorage.setItem('sw_user', JSON.stringify(user)); } catch (e) {}
-            this.showToast(plan ? 'Badhai ho! VIP Pass aur Gift mil gaya' : `Badhai ho! "${gift.title}" claim ho gaya`, 'success');
+            this.showToast(plan ? 'Badhai ho! Gift claim ho gaya. VIP Pass admin jaldi chalu kar dega 👑' : `Badhai ho! "${gift.title}" claim ho gaya`, 'success');
             return true;
         },
 
@@ -5820,6 +5798,8 @@ async creditDeliveredReferral(order) {
                         deliveryCharge: this.deliveryChargeApplied,
                         cashbackUsed: usedCashback,
                         rewardPointsUsed: usedPoints,
+                        couponCode: this.appliedCoupon ? this.appliedCoupon.code : '',
+                        couponDiscount: Number(this.couponDiscountApplied || 0),
                         totalCashbackEarnable: totalCashbackEarnable,
                         cashbackCredited: false,
                         customerAvatar: (this.userAvatarUrl && !String(this.userAvatarUrl).startsWith('data:')) ? this.userAvatarUrl : '',
