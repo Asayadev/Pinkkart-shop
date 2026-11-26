@@ -1961,8 +1961,13 @@
                             <i class="fas fa-star text-indigo-200/50 text-sm"></i>
                         </div>
                         <div>
-                            <p class="text-xl font-black leading-none tracking-tight">{{ Number(loggedInUser.rewards || 0) }} <span class="text-xs font-bold text-indigo-200">Pts</span></p>
-                            <p class="text-[9px] text-indigo-200 font-semibold mt-1">1 Point = ₹1 on VIP checkout</p>
+                           
+<p class="text-xl font-black leading-none tracking-tight">
+  {{ Math.round((Number(loggedInUser.rewards || 0) + Number.EPSILON) * 100) / 100 }}
+  <span class="text-xs font-bold text-indigo-200">Pts</span>
+</p>
+
+    <p class="text-[9px] text-indigo-200 font-semibold mt-1">1 Point = ₹1 on VIP checkout</p>
                         </div>
                     </div>
                 </div>
@@ -2187,37 +2192,41 @@
         </div>
     </div>
 
-    <!-- Horizontal Scroll Road for All Dynamic Levels (10, 25, 60...) -->
-    <div class="flex items-center gap-3 overflow-x-auto no-scrollbar py-2 px-1">
-        <div v-for="lvl in activeMilestoneLevels" :key="lvl" 
-             class="flex-shrink-0 w-24 flex flex-col items-center">
-            
-                       <div @click="openMilestoneReward(lvl)"
-                 class="w-full bg-slate-800/90 border-2 rounded-2xl p-2.5 pt-3 flex items-center justify-around cursor-pointer transition active:scale-95 shadow-md overflow-hidden"
-                 :class="currentMilestoneBought >= lvl ? (isMilestoneClaimed(lvl) ? 'border-emerald-500 bg-emerald-950/40' : 'border-amber-400 bg-amber-950/45 animate-pulse') : 'border-slate-700 opacity-60'">
-                <div class="flex flex-col items-center">
-                    <span class="text-xs">⭐</span>
-                    <span class="text-[8px] font-black text-amber-300">+{{ getMilestonePoints(lvl) }} Pts</span>
-                </div>
-                <div class="w-px h-6 bg-slate-700"></div>
-                <div class="flex flex-col items-center">
-                    <span class="text-base">{{ isMilestoneClaimed(lvl) ? '✅' : (currentMilestoneBought >= lvl ? '🎁' : '🔒') }}</span>
-                    <span class="text-[8px] font-bold text-pink-300">Gift</span>
-                </div>
-            </div>
-            
-            <div class="w-2 h-2 bg-indigo-400 rotate-45 -mt-1 mb-1"></div>
-            <span class="text-[10px] font-black text-amber-300">{{ lvl }} Items</span>
+<!-- Horizontal Scroll Road (Cards + Progress Bar ek saath scroll honge) -->
+<div class="overflow-x-auto no-scrollbar py-2 px-1">
+  <div class="inline-flex flex-col min-w-full">
+
+    <!-- Milestone Cards Row -->
+    <div class="flex items-center gap-3">
+      <div v-for="lvl in activeMilestoneLevels" :key="lvl"
+           class="flex-shrink-0 w-24 flex flex-col items-center">
+        <div @click="openMilestoneReward(lvl)"
+             class="w-full bg-slate-800/90 border-2 rounded-2xl p-2.5 pt-3 flex items-center justify-around cursor-pointer transition active:scale-95 shadow-md overflow-hidden"
+             :class="currentMilestoneBought >= lvl ? (isMilestoneClaimed(lvl) ? 'border-emerald-500 bg-emerald-950/40' : 'border-amber-400 bg-amber-950/45 animate-pulse') : 'border-slate-700 opacity-60'">
+          <div class="flex flex-col items-center">
+            <span class="text-xs">⭐</span>
+            <span class="text-[8px] font-black text-amber-300">+{{ getMilestonePoints(lvl) }} Pts</span>
+          </div>
+          <div class="w-px h-6 bg-slate-700"></div>
+          <div class="flex flex-col items-center">
+            <span class="text-base">{{ isMilestoneClaimed(lvl) ? '✅' : (currentMilestoneBought >= lvl ? '🎁' : '🔒') }}</span>
+            <span class="text-[8px] font-bold text-pink-300">Gift</span>
+          </div>
         </div>
+
+        <div class="w-2 h-2 bg-indigo-400 rotate-45 -mt-1 mb-1"></div>
+        <span class="text-[10px] font-black text-amber-300">{{ lvl }} Items</span>
+      </div>
     </div>
 
-    <!-- Dynamic Progress Bar -->
+    <!-- Track Ke Saath Chalne Wali Progress Bar -->
     <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden p-0.5 border border-indigo-500/40 shadow-inner mt-2">
-        <div class="h-full bg-gradient-to-r from-cyan-400 via-sky-500 to-pink-500 rounded-full transition-all duration-700"
-             :style="{ width: dynamicRoadProgress + '%' }"></div>
+      <div class="h-full bg-gradient-to-r from-cyan-400 via-sky-500 to-pink-500 rounded-full transition-all duration-700"
+           :style="{ width: dynamicRoadProgress + '%' }"></div>
     </div>
-</div>
-
+  </div>
+  </div>
+  </div>
           <!-- ===== RECENT CASHBACK, REWARDS & REFERRAL HISTORY ===== -->
 <div v-if="(userOrders && userOrders.some(o => Number(o.cashbackUsed) > 0 || Number(o.rewardPointsUsed) > 0)) || (userRewardHistory && userRewardHistory.length > 0)"
      class="bg-white rounded-3xl border border-gray-100 p-4 shadow-xs">
@@ -4022,11 +4031,23 @@ rewardPointsApplied() {
                     return Object.keys(this.dynamicMilestones).map(Number).sort((a,b)=>a-b);
                 },
                 dynamicRoadProgress() {
-                    const levels = this.activeMilestoneLevels;
-                    if (!levels.length) return 0;
-                    const maxLevel = levels[levels.length - 1];
-                    return Math.min(100, Math.round((this.currentMilestoneBought / maxLevel) * 100));
-                },
+    const levels = this.activeMilestoneLevels;
+    if (!levels.length) return 0;
+    const count = this.currentMilestoneBought;
+    const maxLevel = levels[levels.length - 1];
+    if (count >= maxLevel) return 100;
+
+    const nextTarget = levels.find(l => l > count);
+    if (!nextTarget) return 100;
+
+    const prevTarget = levels.filter(l => l <= count).pop() || 0;
+    const span = Math.max(1, nextTarget - prevTarget);
+    const stepBase = (levels.indexOf(nextTarget) / levels.length) * 100;
+    const stepShare = (1 / levels.length) * 100;
+    const withinStep = Math.min(1, Math.max(0, (count - prevTarget) / span));
+
+    return Math.min(100, Math.round(stepBase + withinStep * stepShare));
+},
 
                 // Latest non-delivered/non-rejected active order
                 activeOrder() {
